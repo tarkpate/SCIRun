@@ -2,8 +2,8 @@
   "module": {
     "name": "ShowUncertaintyGlyphs",
     "namespace": "Visualization",
-    "status": "description of status",
-    "description": "For visualizing uncertainty in field data with glyphs.",
+    "status": "...",
+    "description": "...",
     "header": "Modules/Visualization/ShowUncertaintyGlyphs.h"
   },
   "algorithm": {
@@ -12,7 +12,7 @@
     "header": "N/A"
   },
   "UI": {
-    "name": "N/A",
-    "header": "N/A"
+    "name": "ShowUncertaintyGlyphsDialog",
+    "header": "Interface/Modules/Visualization/ShowUncertaintyGlyphsDialog.h"
   }
 }

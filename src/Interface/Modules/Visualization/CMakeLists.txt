@@ -31,6 +31,7 @@ SET(Interface_Modules_Visualization_FORMS
   GenerateStreamLines.ui
   ShowField.ui
   ShowFieldGlyphs.ui
+  ShowUncertaintyGlyphs.ui
   ShowString.ui
   ShowColorMap.ui
   RescaleColorMap.ui
@@ -44,6 +45,7 @@ SET(Interface_Modules_Visualization_HEADERS
   share.h
   ShowFieldDialog.h
   ShowFieldGlyphsDialog.h
+  ShowUncertaintyGlyphsDialog.h
   ShowStringDialog.h
   ShowColorMapDialog.h
   RescaleColorMapDialog.h
@@ -56,6 +58,7 @@ SET(Interface_Modules_Visualization_SOURCES
   GenerateStreamLinesDialog.cc
   ShowFieldDialog.cc
   ShowFieldGlyphsDialog.cc
+  ShowUncertaintyGlyphsDialog.cc
   ShowStringDialog.cc
   ShowColorMapDialog.cc
   RescaleColorMapDialog.cc
