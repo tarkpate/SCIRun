@@ -84,6 +84,7 @@ public:
   Tensor& operator-=(const Tensor&);
   Tensor operator*(const double) const;
   Vector operator*(const Vector&) const;
+  Tensor operator/(const double) const;
 
   static std::string type_name(int i = -1);
 

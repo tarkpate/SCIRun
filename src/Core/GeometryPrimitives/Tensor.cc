@@ -327,6 +327,13 @@ Vector Tensor::operator*(const Vector& v) const
 		v.x()*mat_[2][0]+v.y()*mat_[2][1]+v.z()*mat_[2][2]);
 }
 
+Tensor Tensor::operator/(const double s) const
+{
+  Tensor t1(*this);
+  double div = 1/s;
+  return t1 * div;
+}
+
 void Tensor::build_eigens_from_mat()
 {
   if (have_eigens_) return;
