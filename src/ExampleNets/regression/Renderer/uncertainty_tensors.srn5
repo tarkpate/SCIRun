@@ -1712,7 +1712,7 @@
 			<item>
 				<moduleId1_>ShowUncertaintyGlyphs:0</moduleId1_>
 				<port1_>
-					<name>Mean</name>
+					<name>MeanTensorField</name>
 					<id>0</id>
 				</port1_>
 				<moduleId2_>ShowFieldGlyphs:0</moduleId2_>

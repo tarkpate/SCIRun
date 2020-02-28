@@ -8,18 +8,42 @@
 #include <Core/Datatypes/Mesh/MeshFacade.h>
 
 using namespace SCIRun;
-using namespace SCIRun::Core::Datatypes;
-using namespace SCIRun::Core::Algorithms;
-using namespace SCIRun::Core::Geometry;
-using namespace SCIRun::Core::Algorithms::Visualization;
+using namespace Core::Datatypes;
+using namespace Core::Algorithms;
+using namespace Core::Geometry;
+using namespace Core::Algorithms::Visualization;
 
-//  this function is for setting defaults for state variables.
-//  Mostly for UI variables.
+const AlgorithmOutputName ShowUncertaintyGlyphsAlgorithm::MeanTensorField("MeanTensorField");
+
+class ShowUncertaintyGlyphsImpl
+{
+public:
+  ShowUncertaintyGlyphsImpl();
+  FieldHandle run(const FieldList &fields);
+private:
+  void computeMeanTensors();
+  Tensor computeMeanTensor(int index) const;
+  void verifyData(const FieldList &fields);
+  void getPoints(const FieldList &fields);
+  void getPointsForFields(FieldHandle field, std::vector<int> &indices, std::vector<Point> &points);
+  void getTensors(const FieldList &fields);
+  FieldHandle createOutputField() const;
+
+  int fieldCount_ = 0;
+  int fieldSize_ = 0;
+
+  std::vector<std::vector<Core::Geometry::Point>> points_;
+  std::vector<std::vector<int>> indices_;
+  std::vector<std::vector<Core::Geometry::Tensor>> tensors_;
+  std::vector<Core::Geometry::Tensor> meanTensors_;
+};
+
 ShowUncertaintyGlyphsAlgorithm::ShowUncertaintyGlyphsAlgorithm()
 {
-  // using namespace Parameters;
-  // addParameter(Knob1, false);
-  // addParameter(Knob2, 1.0);
+}
+
+ShowUncertaintyGlyphsImpl::ShowUncertaintyGlyphsImpl()
+{
 }
 
 //TODO move to separate algo
@@ -31,9 +55,28 @@ enum FieldDataType
   cell
 };
 
-void ShowUncertaintyGlyphsAlgorithm::getPointsForFields(FieldHandle field,
-                                                        std::vector<int> &indices,
-                                                        std::vector<Point> &points)
+FieldHandle ShowUncertaintyGlyphsImpl::run(const FieldList &fields)
+{
+  getPoints(fields);
+  verifyData(fields);
+  getTensors(fields);
+  computeMeanTensors();
+  return createOutputField();
+}
+
+void ShowUncertaintyGlyphsImpl::getPoints(const FieldList &fields)
+{
+  fieldCount_ = fields.size();
+
+  indices_ = std::vector<std::vector<int>>(fieldCount_);
+  points_  = std::vector<std::vector<Point>>(fieldCount_);
+
+  for (int f = 0; f < fieldCount_; ++f)
+    getPointsForFields(fields[f], indices_[f], points_[f]);
+}
+
+void ShowUncertaintyGlyphsImpl::getPointsForFields(FieldHandle field, std::vector<int> &indices,
+                                                   std::vector<Point> &points)
 {
     // Collect indices and points from facades
   FieldDataType fieldLocation;
@@ -90,48 +133,26 @@ void ShowUncertaintyGlyphsAlgorithm::getPointsForFields(FieldHandle field,
   }
 }
 
-void ShowUncertaintyGlyphsAlgorithm::verifyData(const FieldList &fields)
+void ShowUncertaintyGlyphsImpl::verifyData(const FieldList &fields)
 {
-  for(int f = 1; f < fieldCount_; ++f)
-    if(indices_[f].size() != fieldSize_)
+  fieldSize_ = indices_[0].size();
+  for (int f = 1; f < fieldCount_; ++f)
+    if (indices_[f].size() != fieldSize_)
       throw std::invalid_argument("All field inputs must have the same size.");
 
   // Verify all are tensors
-  for(auto field : fields)
+  for (auto field : fields)
   {
     FieldInformation finfo(field);
-    if(!finfo.is_tensor())
+    if (!finfo.is_tensor())
       throw std::invalid_argument("Currently, this module only supports tensor fields.");
   }
 }
 
-void ShowUncertaintyGlyphsAlgorithm::getPoints(const FieldList &fields)
-{
-  fieldCount_ = fields.size();
-  fieldSize_ = indices_[0].size();
-
-  indices_ = std::vector<std::vector<int>>(fieldCount_);
-  points_  = std::vector<std::vector<Point>>(fieldCount_);
-
-  for(int f = 0; f < fieldCount_; ++f)
-    getPointsForFields(fields[f], indices_[f], points_[f]);
-}
-
-Tensor ShowUncertaintyGlyphsAlgorithm::computeMeanTensor(int index) const
-{
-  Tensor sum = Tensor();
-  for(const auto tensor : tensors_[index])
-    sum += tensor;
-
-  // double div = (1.0 / fields.size());
-  Tensor mean = sum / fieldCount_;
-  return mean;
-}
-
-void ShowUncertaintyGlyphsAlgorithm::getTensors(FieldList &fields)
+void ShowUncertaintyGlyphsImpl::getTensors(const FieldList &fields)
 {
   tensors_ = std::vector<std::vector<Tensor>>(fieldCount_);
-  for(int f = 0; f < fieldCount_; ++f)
+  for (int f = 0; f < fieldCount_; ++f)
   {
     tensors_[f] = std::vector<Tensor>(fieldSize_);
     auto vfield = fields[f]->vfield();
@@ -140,14 +161,23 @@ void ShowUncertaintyGlyphsAlgorithm::getTensors(FieldList &fields)
   }
 }
 
-void ShowUncertaintyGlyphsAlgorithm::computeMeanTensors()
+void ShowUncertaintyGlyphsImpl::computeMeanTensors()
 {
-  meanTensors_ = std::vector<Tensor>(fieldCount_);
-  for (int f = 0; f < fieldCount_; ++f)
-    meanTensors_[f] = computeMeanTensor(f);
+  meanTensors_ = std::vector<Tensor>(fieldSize_);
+  for (int t = 0; t < fieldSize_; ++t)
+    meanTensors_[t] = computeMeanTensor(t);
 }
 
-FieldHandle ShowUncertaintyGlyphsAlgorithm::createOutputField() const
+Tensor ShowUncertaintyGlyphsImpl::computeMeanTensor(int t) const
+{
+  Tensor sum = Tensor();
+  for(int f = 0; f < fieldCount_; ++f)
+    sum += tensors_[f][t];
+
+  return sum / fieldCount_;
+}
+
+FieldHandle ShowUncertaintyGlyphsImpl::createOutputField() const
 {
   FieldInformation ofinfo("PointCloudMesh", 0, "Tensor");
   auto ofield = CreateField(ofinfo);
@@ -155,30 +185,27 @@ FieldHandle ShowUncertaintyGlyphsAlgorithm::createOutputField() const
   auto field = ofield->vfield();
 
   std::vector<VMesh::index_type> meshIndices(fieldSize_);
-  for(int i = 0; i < fieldSize_; ++i)
+  for (int i = 0; i < fieldSize_; ++i)
     meshIndices[i] = mesh->add_point(points_[0][i]);
 
   field->resize_fdata();
 
-  for(int i = 0; i < fieldSize_; ++i)
+  for (int i = 0; i < fieldSize_; ++i)
     field->set_value(meanTensors_[i], meshIndices[i]);
 
   return ofield;
 }
 
 //main algorithm function
-AlgorithmOutput ShowUncertaintyGlyphsAlgorithm::run(const AlgorithmInput &input)
+AlgorithmOutput ShowUncertaintyGlyphsAlgorithm::run(const AlgorithmInput &input) const
 {
   auto fields = input.getList<Field>(Variables::InputFields);
   if (fields.empty())
     THROW_ALGORITHM_INPUT_ERROR("No input fields given");
 
-  getPoints(fields);
-  verifyData(fields);
-  getTensors(fields);
-  computeMeanTensors();
+  auto impl = ShowUncertaintyGlyphsImpl();
 
   AlgorithmOutput output;
-  output[Variables::InputFields] = createOutputField();
+  output[MeanTensorField] = impl.run(fields);
   return output;
 }
