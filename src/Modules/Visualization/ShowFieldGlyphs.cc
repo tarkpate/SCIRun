@@ -116,7 +116,7 @@ namespace SCIRun {
         ColorScheme getColoringType(const RenderState& renState, VField* fld);
         void getPoints(VMesh* mesh, std::vector<int>& indices, std::vector<Point>& points);
         std::unique_ptr<ShowFieldGlyphsPortHandler> portHandler_;
-        RenderState::InputPort getInput(std::string&& port_name);
+        RenderState::InputPort getInput(const std::string& port_name);
         void addGlyph(
           GlyphGeom& glyphs,
           int glyph_type,
@@ -348,7 +348,7 @@ void ShowFieldGlyphs::configureInputs(
   }
 }
 
-RenderState::InputPort GlyphBuilder::getInput(std::string&& port_name)
+RenderState::InputPort GlyphBuilder::getInput(const std::string& port_name)
 {
   if(port_name == "Primary")
   {
@@ -470,7 +470,6 @@ void GlyphBuilder::getPoints(VMesh* mesh, std::vector<int>& indices, std::vector
   switch(fieldLocation)
   {
     case FieldDataType::node:
-      std::cout << "node data\n";
       for (const auto& node : portHandler_->getPrimaryFacade()->nodes())
       {
         indices.push_back(node.index());
@@ -480,7 +479,6 @@ void GlyphBuilder::getPoints(VMesh* mesh, std::vector<int>& indices, std::vector
       }
       break;
     case FieldDataType::edge:
-      std::cout << "edge data\n";
       for (const auto& edge : portHandler_->getPrimaryFacade()->edges())
       {
         indices.push_back(edge.index());
@@ -490,7 +488,6 @@ void GlyphBuilder::getPoints(VMesh* mesh, std::vector<int>& indices, std::vector
       }
       break;
     case FieldDataType::face:
-      std::cout << "face data\n";
       for (const auto& face : portHandler_->getPrimaryFacade()->faces())
       {
         indices.push_back(face.index());
@@ -500,7 +497,6 @@ void GlyphBuilder::getPoints(VMesh* mesh, std::vector<int>& indices, std::vector
       }
       break;
     case FieldDataType::cell:
-      std::cout << "cell data\n";
       for (const auto& cell : portHandler_->getPrimaryFacade()->cells())
       {
         indices.push_back(cell.index());
@@ -801,11 +797,11 @@ void GlyphBuilder::renderTensors(
         case RenderState::GlyphType::ELLIPSOID_GLYPH:
           glyphs.addEllipsoid(points[i], t, scale, resolution, node_color, normalizeGlyphs);
           break;
-        case RenderState::GlyphType::SUPERELLIPSOID_GLYPH:
+        case RenderState::GlyphType::SUPERQUADRIC_TENSOR_GLYPH:
         {
           double emphasis = state->getValue(ShowFieldGlyphs::SuperquadricEmphasis).toDouble();
           if(emphasis > 0.0)
-            glyphs.addSuperEllipsoid(points[i], t, scale, resolution, node_color, normalizeGlyphs, emphasis);
+            glyphs.addSuperquadricTensor(points[i], t, scale, resolution, node_color, normalizeGlyphs, emphasis);
           else
             glyphs.addEllipsoid(points[i], t, scale, resolution, node_color, normalizeGlyphs);
         }
@@ -911,7 +907,6 @@ RenderState GlyphBuilder::getScalarsRenderState(ModuleStateHandle state)
 
   renState.set(RenderState::USE_NORMALS, true);
 
-  //renState.set(RenderState::IS_ON, state->getValue(ShowFieldGlyphs::ShowScalars).toBool());
   // Transparency
   int transparency = state->getValue(ShowFieldGlyphs::ScalarsTransparency).toInt();
   if(transparency == 0)
@@ -927,9 +922,6 @@ RenderState GlyphBuilder::getScalarsRenderState(ModuleStateHandle state)
   {
     renState.set(RenderState::USE_TRANSPARENT_NODES, true);
   }
-
-  //renState.mTransparencyInput = getInput(state->getValue(ShowFieldGlyphs::ScalarsTransparencyDataInput).toString());
-  //renState.mTransparencyInput = state->getValue(ShowFieldGlyphs::ScalarsTransparenycDataInput).toString();
 
   std::string g_type = state->getValue(ShowFieldGlyphs::ScalarsDisplayType).toString();
   if(g_type == "Lines")
@@ -967,7 +959,6 @@ RenderState GlyphBuilder::getScalarsRenderState(ModuleStateHandle state)
     renState.set(RenderState::USE_DEFAULT_COLOR, true);
   }
   renState.mColorInput = getInput(state->getValue(ShowFieldGlyphs::ScalarsColoringDataInput).toString());
-  //renState.mColorInput = state->getValue(ShowFieldGlyphs::ScalarsColorDataInput).toString();
 
   return renState;
 }
@@ -1005,8 +996,9 @@ RenderState GlyphBuilder::getTensorsRenderState(ModuleStateHandle state)
     renState.mGlyphType = RenderState::GlyphType::ELLIPSOID_GLYPH;
   else if(glyph == "Spheres")
     renState.mGlyphType = RenderState::GlyphType::SPHERE_GLYPH;
-  else if(glyph == "Superellipsoids")
-    renState.mGlyphType = RenderState::GlyphType::SUPERELLIPSOID_GLYPH;
+  else if(glyph == "Superquadrics"
+       || glyph == "Superellipsoids") // This case matches old name in case files had it saved in state
+    renState.mGlyphType = RenderState::GlyphType::SUPERQUADRIC_TENSOR_GLYPH;
   else
     renState.mGlyphType = RenderState::GlyphType::BOX_GLYPH;
 
@@ -1031,7 +1023,6 @@ RenderState GlyphBuilder::getTensorsRenderState(ModuleStateHandle state)
     renState.set(RenderState::USE_DEFAULT_COLOR, true);
   }
   renState.mColorInput = getInput(state->getValue(ShowFieldGlyphs::TensorsColoringDataInput).toString());
-  //renState.mColorInput = state->getValue(ShowFieldGlyphs::TensorsColorDataInput).toString();
 
   return renState;
 }

@@ -722,7 +722,7 @@
 									<name>TensorsDisplayType</name>
 									<value>
 										<which>2</which>
-										<value>Ellipsoids</value>
+										<value>Superquadrics</value>
 									</value>
 								</second>
 							</item>
@@ -958,7 +958,7 @@
 									<name>CameraDistance</name>
 									<value>
 										<which>1</which>
-										<value>5.83177280426025391e+00</value>
+										<value>7.25830364227294922e+00</value>
 									</value>
 								</second>
 							</item>
@@ -1013,28 +1013,28 @@
 												<name>listElement</name>
 												<value>
 													<which>1</which>
-													<value>9.82215225696563721e-01</value>
+													<value>6.65133595466613770e-01</value>
 												</value>
 											</item>
 											<item>
 												<name>listElement</name>
 												<value>
 													<which>1</which>
-													<value>-1.81001946330070496e-01</value>
+													<value>5.02789437770843506e-01</value>
 												</value>
 											</item>
 											<item>
 												<name>listElement</name>
 												<value>
 													<which>1</which>
-													<value>4.34828102588653564e-02</value>
+													<value>5.48979640007019043e-01</value>
 												</value>
 											</item>
 											<item>
 												<name>listElement</name>
 												<value>
 													<which>1</which>
-													<value>-6.92233815789222717e-03</value>
+													<value>-5.35598471760749817e-02</value>
 												</value>
 											</item>
 										</value>

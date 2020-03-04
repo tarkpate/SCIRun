@@ -7,8 +7,10 @@
 #include <Core/Datatypes/Legacy/Field/VMesh.h>
 #include <Core/Datatypes/Mesh/MeshFacade.h>
 #include <Core/Datatypes/DenseMatrix.h>
+#include <Graphics/Glyphs/GlyphGeom.h>
 
 using namespace SCIRun;
+using namespace Graphics;
 using namespace Core::Datatypes;
 using namespace Core::Algorithms;
 using namespace Core::Geometry;
@@ -30,6 +32,14 @@ private:
   void getPoints(const FieldList &fields);
   void getPointsForFields(FieldHandle field, std::vector<int> &indices, std::vector<Point> &points);
   void getTensors(const FieldList &fields);
+  void computeOffsetSurface();
+  Point getSuperquadricTensorPoint(int u, int v, Transform& transform,
+                                   SinCosTable& tab1, SinCosTable& tab2,
+                                   double A, double B, bool linear);
+  Vector getSuperquadricTensorNormal(int u, int v, Transform& rotate,
+                                     SinCosTable& tab1, SinCosTable& tab2,
+                                     double A, double B, bool linear);
+  void makeTensorPositive(Tensor& t);
 
   int fieldCount_ = 0;
   int fieldSize_ = 0;
@@ -39,6 +49,10 @@ private:
   std::vector<std::vector<Tensor>> tensors_;
   std::vector<Tensor> meanTensors_;
   std::vector<DenseMatrix> covarianceMatrices_;
+
+  //TODO make ui params
+  double emphasis_ = 3.0;
+  int resolution_ = 10;
 };
 
 ShowUncertaintyGlyphsAlgorithm::ShowUncertaintyGlyphsAlgorithm()
@@ -65,6 +79,7 @@ void ShowUncertaintyGlyphsImpl::run(const FieldList &fields)
   getTensors(fields);
   computeMeanTensors();
   computeCovarianceMatrices();
+  computeOffsetSurface();
 }
 
 void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
@@ -81,11 +96,180 @@ void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
       auto diffTensorMatrix = DenseMatrix(6, 1);
       for(int i = 0; i < 6; ++i)
         diffTensorMatrix.put(i, 0, diffTensor[i]);
+
       cov += diffTensorMatrix * diffTensorMatrix.transpose();
     }
 
     cov /= fieldCount_;
     covarianceMatrices_[t] = cov;
+  }
+}
+
+void reorderTensor(std::vector<Vector>& eigvectors, std::vector<double>& eigvals)
+{
+  std::vector<int> indices = {0, 1, 2};
+  std::vector<std::pair<double, Vector>> sortList =
+    { std::make_pair(eigvals[0], eigvectors[0]),
+      std::make_pair(eigvals[1], eigvectors[1]),
+      std::make_pair(eigvals[2], eigvectors[2]) };
+
+  std::sort(std::begin(sortList), std::end(sortList));
+
+  for(int i = 0; i < 3; ++i)
+  {
+    eigvals[i] = sortList[i].first;
+    eigvectors[i] = sortList[i].second;
+  }
+}
+
+inline double spow(double e, double x)
+{
+  // This for round off of very small numbers.
+  if( abs( e ) < 1.0e-6)
+    e = 0.0;
+
+  if (e < 0.0)
+  {
+    return (double)(pow(abs(e), x) * -1.0);
+  }
+  else
+  {
+    return (double)(pow(e, x));
+  }
+}
+
+Point ShowUncertaintyGlyphsImpl::getSuperquadricTensorPoint(int u, int v, Transform& transform,
+                                                            SinCosTable& tab1, SinCosTable& tab2,
+                                                            double A, double B, bool linear)
+{
+  double nr = tab2.sin(v);
+  double nz = tab2.cos(v);
+
+  double nx = tab1.sin(u);
+  double ny = tab1.cos(u);
+
+  double x, y, z;
+  if (linear) // Generate around x-axis
+  {
+    x =  spow(nz, B);
+    y = -spow(nr, B) * spow(ny, A);
+    z =  spow(nr, B) * spow(nx, A);
+  }
+  else       // Generate around z-axis
+  {
+    x = spow(nr, B) * spow(nx, A);
+    y = spow(nr, B) * spow(ny, A);
+    z = spow(nz, B);
+  }
+  return Point(transform * Point(x, y, z));
+}
+
+// TODO delete if not used later
+Vector ShowUncertaintyGlyphsImpl::getSuperquadricTensorNormal(int u, int v, Transform& rotate,
+                                                              SinCosTable& tab1, SinCosTable& tab2,
+                                                              double A, double B, bool linear)
+{
+  double nr = tab2.sin(v);
+  double nz = tab2.cos(v);
+
+  double nx = tab1.sin(u);
+  double ny = tab1.cos(u);
+
+  double nnx, nny, nnz;
+  if(linear)
+  {
+    nnx =  spow(nz, 2.0-B);
+    nny = -spow(nr, 2.0-B) * spow(ny, 2.0-A);
+    nnz =  spow(nr, 2.0-B) * spow(nx, 2.0-A);
+  }
+  else
+  {
+    nnx = spow(nr, 2.0-B) * spow(nx, 2.0-A);
+    nny = spow(nr, 2.0-B) * spow(ny, 2.0-A);
+    nnz = spow(nz, 2.0-B);
+  }
+  Vector normal = rotate * Vector(nnx, nny, nnz);
+  normal.safe_normalize();
+  return normal;
+}
+
+void ShowUncertaintyGlyphsImpl::makeTensorPositive(Tensor& t)
+{
+  static const double zeroThreshold = 0.000001;
+  std::vector<Vector> eigvecs(3);
+  t.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
+
+  double eigval1, eigval2, eigval3;
+  t.get_eigenvalues(eigval1, eigval2, eigval3);
+  std::vector<double> eigvals = {fabs(eigval1), fabs(eigval2), fabs(eigval3)};
+  reorderTensor(eigvecs, eigvals);
+
+  for (auto& e : eigvals)
+    if(e <= zeroThreshold)
+      e = 0;
+
+  bool eig_x_0 = eigvals[0] == 0;
+  bool eig_y_0 = eigvals[1] == 0;
+  bool eig_z_0 = eigvals[2] == 0;
+
+  bool flatTensor = (eig_x_0 + eig_y_0 + eig_z_0) >= 1;
+  if (flatTensor)
+  {
+    // Check for zero eigenvectors
+    if (eig_x_0)
+      eigvecs[0] = Cross(eigvecs[1], eigvecs[2]);
+    else if (eig_y_0)
+      eigvecs[1] = Cross(eigvecs[0], eigvecs[2]);
+    else if (eig_z_0)
+      eigvecs[2] = Cross(eigvecs[0], eigvecs[1]);
+  }
+
+  t.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2],
+                       eigvals[0], eigvals[1], eigvals[2]);
+}
+
+void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
+{
+  const static double h = 0.000001;
+  const static double hHalf = 0.5 * h;
+
+  for (int f = 0; f < fieldSize_; ++f)
+  {
+    Tensor t = meanTensors_[f];
+    makeTensorPositive(t);
+    std::vector<Vector> eigvecs(3);
+    t.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
+
+    std::vector<double> eigvals(3);
+    t.get_eigenvalues(eigvals[0], eigvals[1], eigvals[2]);
+
+    Transform rotate = Transform(Point(0,0,0), eigvecs[0], eigvecs[1], eigvecs[2]);
+    Transform transform = rotate;
+    transform.pre_translate((Vector) points_[0][f]);
+
+    Vector eigvalsVector(eigvals[0], eigvals[1], eigvals[2]);
+    transform.post_scale(Vector(1.0,1.0,1.0) * eigvalsVector);
+    rotate.post_scale(Vector(1.0,1.0,1.0) / eigvalsVector);
+
+    int nu = resolution_ + 1;
+    int nv = resolution_;
+
+    SinCosTable tab1(nu, 0, 2 * M_PI);
+    SinCosTable tab2(nv, 0, M_PI);
+
+    double eigvalSum = (eigvals[0] + eigvals[1] + eigvals[2]);
+    double cl = (eigvals[0] - eigvals[1]) / eigvalSum;
+    double cp = 2.0 * (eigvals[1] - eigvals[2]) / eigvalSum;
+    bool linear = cl >= cp;
+
+    double A = linear ? spow((1.0 - cp), emphasis_) : spow((1.0 - cl), emphasis_);
+    double B = linear ? spow((1.0 - cl), emphasis_) : spow((1.0 - cp), emphasis_);
+
+
+    // Loop vertices on superquadric tensor
+    for (int v=0; v < nv-1; v++)
+      for (int u=0; u<nu; u++)
+        auto point = getSuperquadricTensorPoint(u, v, transform, tab1, tab2, A, B, linear);
   }
 }
 
