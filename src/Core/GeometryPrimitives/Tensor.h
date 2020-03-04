@@ -95,6 +95,7 @@ public:
   const Vector &get_eigenvector2() const { ASSERT(have_eigens_); return e2_; }
   const Vector &get_eigenvector3() const { ASSERT(have_eigens_); return e3_; }
   void get_eigenvalues(double &l1, double &l2, double &l3);
+  std::vector<double> mandel();
 
   double norm() const;
   double magnitude();

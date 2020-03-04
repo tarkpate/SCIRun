@@ -387,6 +387,19 @@ void Tensor::set_outside_eigens(const Vector &e1, const Vector &e2,
   have_eigens_ = 1;
 }
 
+std::vector<double> Tensor::mandel()
+{
+  double sqrt2 = sqrt(2);
+  std::vector<double> mandel_tensor =
+    { mat_[0][0],
+      mat_[1][1],
+      mat_[2][2],
+      mat_[0][1] * sqrt2,
+      mat_[0][2] * sqrt2,
+      mat_[1][2] * sqrt2};
+  return mandel_tensor;
+}
+
 void Core::Geometry::Pio(Piostream& stream, Tensor& t)
 {
   stream.begin_cheap_delim();

@@ -6,6 +6,7 @@
 #include <Core/Datatypes/Legacy/Field/VField.h>
 #include <Core/Datatypes/Legacy/Field/VMesh.h>
 #include <Core/Datatypes/Mesh/MeshFacade.h>
+#include <Core/Datatypes/DenseMatrix.h>
 
 using namespace SCIRun;
 using namespace Core::Datatypes;
@@ -19,23 +20,25 @@ class ShowUncertaintyGlyphsImpl
 {
 public:
   ShowUncertaintyGlyphsImpl();
-  FieldHandle run(const FieldList &fields);
+  void run(const FieldList &fields);
+  FieldHandle getMeanTensors() const;
 private:
   void computeMeanTensors();
   Tensor computeMeanTensor(int index) const;
+  void computeCovarianceMatrices();
   void verifyData(const FieldList &fields);
   void getPoints(const FieldList &fields);
   void getPointsForFields(FieldHandle field, std::vector<int> &indices, std::vector<Point> &points);
   void getTensors(const FieldList &fields);
-  FieldHandle createOutputField() const;
 
   int fieldCount_ = 0;
   int fieldSize_ = 0;
 
-  std::vector<std::vector<Core::Geometry::Point>> points_;
+  std::vector<std::vector<Point>> points_;
   std::vector<std::vector<int>> indices_;
-  std::vector<std::vector<Core::Geometry::Tensor>> tensors_;
-  std::vector<Core::Geometry::Tensor> meanTensors_;
+  std::vector<std::vector<Tensor>> tensors_;
+  std::vector<Tensor> meanTensors_;
+  std::vector<DenseMatrix> covarianceMatrices_;
 };
 
 ShowUncertaintyGlyphsAlgorithm::ShowUncertaintyGlyphsAlgorithm()
@@ -55,13 +58,35 @@ enum FieldDataType
   cell
 };
 
-FieldHandle ShowUncertaintyGlyphsImpl::run(const FieldList &fields)
+void ShowUncertaintyGlyphsImpl::run(const FieldList &fields)
 {
   getPoints(fields);
   verifyData(fields);
   getTensors(fields);
   computeMeanTensors();
-  return createOutputField();
+  computeCovarianceMatrices();
+}
+
+void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
+{
+  covarianceMatrices_ = std::vector<DenseMatrix>(fieldSize_);
+
+  for(int t = 0; t < fieldSize_; ++t)
+  {
+    auto cov = DenseMatrix(6, 6, 0.0);
+
+    for(int f = 0; f < fieldCount_; ++f)
+    {
+      auto diffTensor = (tensors_[f][t] - meanTensors_[t]).mandel();
+      auto diffTensorMatrix = DenseMatrix(6, 1);
+      for(int i = 0; i < 6; ++i)
+        diffTensorMatrix.put(i, 0, diffTensor[i]);
+      cov += diffTensorMatrix * diffTensorMatrix.transpose();
+    }
+
+    cov /= fieldCount_;
+    covarianceMatrices_[t] = cov;
+  }
 }
 
 void ShowUncertaintyGlyphsImpl::getPoints(const FieldList &fields)
@@ -177,7 +202,7 @@ Tensor ShowUncertaintyGlyphsImpl::computeMeanTensor(int t) const
   return sum / fieldCount_;
 }
 
-FieldHandle ShowUncertaintyGlyphsImpl::createOutputField() const
+FieldHandle ShowUncertaintyGlyphsImpl::getMeanTensors() const
 {
   FieldInformation ofinfo("PointCloudMesh", 0, "Tensor");
   auto ofield = CreateField(ofinfo);
@@ -206,6 +231,7 @@ AlgorithmOutput ShowUncertaintyGlyphsAlgorithm::run(const AlgorithmInput &input)
   auto impl = ShowUncertaintyGlyphsImpl();
 
   AlgorithmOutput output;
-  output[MeanTensorField] = impl.run(fields);
+  impl.run(fields);
+  output[MeanTensorField] = impl.getMeanTensors();
   return output;
 }
