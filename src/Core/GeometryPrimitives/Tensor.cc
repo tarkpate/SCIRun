@@ -253,6 +253,13 @@ double Tensor::norm() const
   return (a);
 }
 
+Vector Tensor::euclidean_norm() const
+{
+  auto eigvals = Vector(l1_, l2_, l3_);
+  eigvals.normalize();
+  return eigvals;
+}
+
 double Tensor::magnitude()
 {
   double eigenval1, eigenval2, eigenval3;
@@ -398,6 +405,26 @@ std::vector<double> Tensor::mandel()
       mat_[0][2] * sqrt2,
       mat_[1][2] * sqrt2};
   return mandel_tensor;
+}
+
+double Tensor::eigenValueSum()
+{
+  return l1_ + l2_ + l3_;
+}
+
+double Tensor::linearCertainty()
+{
+  return (l1_ - l2_) / eigenValueSum();
+}
+
+double Tensor::planarCertainty()
+{
+  return 2.0 * (l2_ - l3_) / eigenValueSum();
+}
+
+double Tensor::sphericalCertainty()
+{
+  return 3.0 * (l3_) / eigenValueSum();
 }
 
 void Core::Geometry::Pio(Piostream& stream, Tensor& t)
