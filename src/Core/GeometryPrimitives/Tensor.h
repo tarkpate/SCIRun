@@ -95,7 +95,7 @@ public:
   const Vector &get_eigenvector2() const { ASSERT(have_eigens_); return e2_; }
   const Vector &get_eigenvector3() const { ASSERT(have_eigens_); return e3_; }
   void get_eigenvalues(double &l1, double &l2, double &l3);
-  std::vector<double> mandel();
+  std::vector<double> mandel() const;
 
   double norm() const;
   Vector euclidean_norm() const;
@@ -129,12 +129,12 @@ public:
   double val(size_t i, size_t j) const { return mat_[i][j]; }
   double& val(size_t i, size_t j) { return mat_[i][j]; }
 
-  double linearCertainty();
-  double planarCertainty();
-  double sphericalCertainty();
+  double linearCertainty() const;
+  double planarCertainty() const;
+  double sphericalCertainty() const;
 
 private:
-  double eigenValueSum();
+  double eigenValueSum() const;
   double mat_[3][3];
   Vector e1_, e2_, e3_;  // these are already scaled by the eigenvalues
   double l1_, l2_, l3_;
