@@ -95,7 +95,7 @@ public:
   const Vector &get_eigenvector2() const { ASSERT(have_eigens_); return e2_; }
   const Vector &get_eigenvector3() const { ASSERT(have_eigens_); return e3_; }
   void get_eigenvalues(double &l1, double &l2, double &l3);
-  std::vector<double> mandel() const;
+  DenseMatrix mandel() const;
 
   double norm() const;
   Vector euclidean_norm() const;
@@ -179,6 +179,17 @@ Tensor symmetricTensorFromSixElementArray(const Indexable& array)
     array[4],
     array[5]
     );
+}
+
+template <typename Indexable>
+Tensor symmetricTensorFromMandel(const Indexable& array)
+{
+return Tensor(array[0],
+              array[3],
+              array[4],
+              array[1],
+              array[5],
+              array[2]);
 }
 
 template <typename Indexable>

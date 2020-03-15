@@ -394,17 +394,18 @@ void Tensor::set_outside_eigens(const Vector &e1, const Vector &e2,
   have_eigens_ = 1;
 }
 
-std::vector<double> Tensor::mandel() const
+DenseMatrix Tensor::mandel() const
 {
-  double sqrt2 = sqrt(2);
-  std::vector<double> mandel_tensor =
-    { mat_[0][0],
-      mat_[1][1],
-      mat_[2][2],
-      mat_[0][1] * sqrt2,
-      mat_[0][2] * sqrt2,
-      mat_[1][2] * sqrt2};
-  return mandel_tensor;
+  const static double sqrt2 = sqrt(2);
+
+  auto man = DenseMatrix(6, 1);
+  for(int i = 0; i < 3; ++i)
+    man.put(i, 0, mat_[i][i]);
+  man.put(3, 0, mat_[0][1] * sqrt2);
+  man.put(4, 0, mat_[0][2] * sqrt2);
+  man.put(5, 0, mat_[1][2] * sqrt2);
+
+  return man;
 }
 
 double Tensor::eigenValueSum() const

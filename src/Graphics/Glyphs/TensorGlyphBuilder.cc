@@ -184,7 +184,7 @@ void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool h
       constructor.setOffset();
       for (int i = 0; i < 2; ++i)
       {
-        Point point = evaluateEllipsoidPoint(sinPhi[i], cosPhi[i], sinTheta, cosTheta);
+        Point point = evaluateEllipsoidPoint({sinPhi[i], cosPhi[i], sinTheta, cosTheta});
         Vector pVector = Vector(trans_ * point);
 
         Vector normal;
@@ -210,14 +210,58 @@ void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool h
   }
 }
 
-Point TensorGlyphBuilder::evaluateEllipsoidPoint(double sinPhi, double cosPhi,
-                                                 double sinTheta, double cosTheta)
+Point TensorGlyphBuilder::evaluateEllipsoidPoint(EllipsoidPointParams& params)
 {
   double x, y, z;
-  x = sinPhi * sinTheta;
-  y = sinPhi * cosTheta;
-  z = cosPhi;
+  x = params.sinPhi * params.sinTheta;
+  y = params.sinPhi * params.cosTheta;
+  z = params.cosPhi;
   return Point(x, y, z);
+}
+
+bool TensorGlyphBuilder::isLinear()
+{
+  cl_ = t_.linearCertainty();
+  cp_ = t_.planarCertainty();
+  return cl_ >= cp_;
+}
+
+void TensorGlyphBuilder::computeAAndB()
+{
+  double pPower = GlyphGeomUtility::spow((1.0 - cp_), emphasis);
+  double lPower = GlyphGeomUtility::spow((1.0 - cl_), emphasis);
+  A_ = linear ? pPower : lPower;
+  B_ = linear ? lPower : pPower;
+}
+
+double TensorGlyphBuilder::getA()
+{
+  return A_;
+}
+
+double TensorGlyphBuilder::getB()
+{
+  return B_;
+}
+
+double TensorGlyphBuilder::computeSinPhi(int v)
+{
+  return tab2_.sin(v);
+}
+
+double TensorGlyphBuilder::computeCosPhi(int v)
+{
+  return tab2_.cos(v);
+}
+
+double TensorGlyphBuilder::computeSinTheta(int u)
+{
+  return tab1_.sin(u);
+}
+
+double TensorGlyphBuilder::computeCosTheta(int u)
+{
+  return tab1_.cos(u);
 }
 
 void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis)
@@ -227,17 +271,15 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   postScaleTransorms();
   computeSinCosTable(false);
 
-  double cl = t_.linearCertainty();
-  double cp = t_.planarCertainty();
-  bool linear = cl >= cp;
+  bool linear = isLinear();
+  computeAAndB(emphasis);
+  SuperquadricPointParams params;
+  params.A = A_;
+  params.B = B_;
 
-  double pPower = GlyphGeomUtility::spow((1.0 - cp), emphasis);
-  double lPower = GlyphGeomUtility::spow((1.0 - cl), emphasis);
-  double A = linear ? pPower : lPower;
-  double B = linear ? lPower : pPower;
-
-  double normalA = 2.0-A;
-  double normalB = 2.0-B;
+  SuperquadricPointParams normalParams;
+  normalParams.A = 2.0 - A_;
+  normalParams.B = 2.0 - B_;
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
@@ -252,13 +294,15 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
     for (int u = 0; u < nu_; ++u)
     {
       constructor.setOffset();
-      double sinTheta = tab1_.sin(u);
-      double cosTheta = tab1_.cos(u);
+      params.sinTheta = normalParams.sinTheta = tab1_.sin(u);
+      params.cosTheta = normalParams.cosTheta = tab1_.cos(u);
 
       for(int i = 0; i < 2; ++i)
       {
+        params.sinPhi = normalParams.sinPhi = sinPhi[i];
+        params.cosPhi = normalParams.cosPhi = cosPhi[i];
         // Transorm points and add to points list
-        Point p = evaluateSuperquadricPoint(linear, sinPhi[i], cosPhi[i], sinTheta, cosTheta, A, B);
+        Point p = evaluateSuperquadricPoint(linear, params);
         Vector pVector = Vector(trans_ * p);
 
         Vector normal;
@@ -270,8 +314,7 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
         }
         else
         {
-          normal = Vector(evaluateSuperquadricPoint(linear, sinPhi[i], cosPhi[i],
-                                                    sinTheta, cosTheta, normalA, normalB));
+          normal = Vector(evaluateSuperquadricPoint(linear, normalParams));
           normal = rotate_ * normal;
           normal.safe_normalize();
         }
@@ -286,37 +329,35 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   constructor.popIndicesNTimes(6);
 }
 
-Point TensorGlyphBuilder::evaluateSuperquadricPoint(bool linear, double sinPhi, double cosPhi,
-                                                    double sinTheta, double cosTheta,
-                                                    double A, double B)
+Point TensorGlyphBuilder::evaluateSuperquadricPoint(bool linear, SuperquadricPointParams& params)
 {
   if (linear)
-    return evaluateSuperquadricPointLinear(sinPhi, cosPhi, sinTheta, cosTheta, A, B);
+    return evaluateSuperquadricPointLinear(params);
   else
-    return evaluateSuperquadricPointPlanar(sinPhi, cosPhi, sinTheta, cosTheta, A, B);
+    return evaluateSuperquadricPointPlanar(params);
 }
 
 // Generate around x-axis
-Point TensorGlyphBuilder::evaluateSuperquadricPointLinear(double sinPhi, double cosPhi,
-                                                          double sinTheta, double cosTheta,
-                                                          double A, double B)
+Point TensorGlyphBuilder::evaluateSuperquadricPointLinear(SuperquadricPointParams& params)
 {
   double x, y, z;
-  x =  GlyphGeomUtility::spow(cosPhi, B);
-  y = -GlyphGeomUtility::spow(sinPhi, B) * GlyphGeomUtility::spow(sinTheta, A);
-  z =  GlyphGeomUtility::spow(sinPhi, B) * GlyphGeomUtility::spow(cosTheta, A);
+  x =  GlyphGeomUtility::spow(params.cosPhi, params.B);
+  y = -GlyphGeomUtility::spow(params.sinPhi, params.B)
+      * GlyphGeomUtility::spow(params.sinTheta, params.A);
+  z = GlyphGeomUtility::spow(params.sinPhi, params.B)
+      * GlyphGeomUtility::spow(params.cosTheta, params.A);
   return Point(x, y, z);
 }
 
 // Generate around z-axis
-Point TensorGlyphBuilder::evaluateSuperquadricPointPlanar(double sinPhi, double cosPhi,
-                                                          double sinTheta, double cosTheta,
-                                                          double A, double B)
+Point TensorGlyphBuilder::evaluateSuperquadricPointPlanar(SuperquadricPointParams& params)
 {
   double x, y, z;
-  x = GlyphGeomUtility::spow(sinPhi, B) * GlyphGeomUtility::spow(cosTheta, A);
-  y = GlyphGeomUtility::spow(sinPhi, B) * GlyphGeomUtility::spow(sinTheta, A);
-  z = GlyphGeomUtility::spow(cosPhi, B);
+  x = GlyphGeomUtility::spow(params.sinPhi, params.B)
+    * GlyphGeomUtility::spow(params.cosTheta, params.A);
+  y = GlyphGeomUtility::spow(params.sinPhi, params.B)
+    * GlyphGeomUtility::spow(params.sinTheta, params.A);
+  z = GlyphGeomUtility::spow(params.cosPhi, params.B);
   return Point(x, y, z);
 }
 
@@ -363,3 +404,7 @@ std::vector<Vector> TensorGlyphBuilder::generateBoxPoints()
   return boxPoints;
 }
 
+Transform TensorGlyphBuilder::getTrans()
+{
+  return trans_;
+}

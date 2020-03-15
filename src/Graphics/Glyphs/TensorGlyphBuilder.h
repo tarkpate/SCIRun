@@ -40,6 +40,24 @@
 
 namespace SCIRun {
 namespace Graphics {
+struct EllipsoidPointParams
+{
+  double sinPhi;
+  double cosPhi;
+  double sinTheta;
+  double cosTheta;
+};
+
+struct SuperquadricPointParams
+{
+  double sinPhi;
+  double cosPhi;
+  double sinTheta;
+  double cosTheta;
+  double A;
+  double B;
+};
+
 class SCISHARE TensorGlyphBuilder
 {
 public:
@@ -54,23 +72,30 @@ public:
   void generateEllipsoid(GlyphConstructor& constructor, bool half);
   void generateBox(GlyphConstructor& constructor);
 
+  Core::Geometry::Point evaluateSuperquadricPointLinear(SuperquadricPointParams& params);
+  Core::Geometry::Point evaluateSuperquadricPointPlanar(SuperquadricPointParams& params);
+  Core::Geometry::Point evaluateSuperquadricPoint(bool linear, SuperquadricPointParams& params);
+  Core::Geometry::Point evaluateEllipsoidPoint(EllipsoidPointParams& params);
+
+  void computeTransforms();
+  void computeSinCosTable(bool half);
+  void postScaleTransorms();
+  Transform getTrans();
+  bool isLinear();
+  void computeAAndB();
+  double getA();
+  double getB();
+  double computeSinPhi(int v);
+  double computeCosPhi(int v);
+  double computeSinTheta(int u);
+  double computeCosTheta(int u);
 private:
-  Core::Geometry::Point evaluateSuperquadricPointLinear(double sinphi, double cosphi, double sintheta,
-                                        double costheta, double A, double B);
-  Core::Geometry::Point evaluateSuperquadricPointPlanar(double sinphi, double cosphi, double sintheta,
-                                        double costheta, double A, double B);
-  Core::Geometry::Point evaluateEllipsoidPoint(double sinphi, double cosphi, double sintheta, double costheta);
-  Core::Geometry::Point evaluateSuperquadricPoint(bool linear, double sinPhi, double cosPhi, double sinTheta,
-                                  double cosTheta, double A, double B);
   void generateBoxSide(GlyphConstructor& constructor, const Core::Geometry::Vector& p1, const Core::Geometry::Vector& p2,
                        const Core::Geometry::Vector& p3, const Core::Geometry::Vector& p4,
                        const Core::Geometry::Vector& normal);
   std::vector<Core::Geometry::Vector> generateBoxPoints();
   std::vector<Core::Geometry::Vector> getEigenVectors();
   std::vector<double> getEigenValues();
-  void computeTransforms();
-  void postScaleTransorms();
-  void computeSinCosTable(bool half);
 
   const static int DIMENSIONS_ = 3;
   const static int BOX_FACE_POINTS_ = 4;
@@ -84,6 +109,7 @@ private:
   SinCosTable tab1_, tab2_;
   int nv_ = 0;
   int nu_ = 0;
+  double cl_, cp_;
 };
 }}
 

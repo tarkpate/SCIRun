@@ -93,11 +93,7 @@ void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
     for(int f = 0; f < fieldCount_; ++f)
     {
       auto diffTensor = (tensors_[f][t] - meanTensors_[t]).mandel();
-      auto diffTensorMatrix = DenseMatrix(6, 1);
-      for(int i = 0; i < 6; ++i)
-        diffTensorMatrix.put(i, 0, diffTensor[i]);
-
-      cov += diffTensorMatrix * diffTensorMatrix.transpose();
+      cov += diffTensor * diffTensor.transpose();
     }
 
     cov /= fieldCount_;
@@ -228,6 +224,27 @@ void ShowUncertaintyGlyphsImpl::makeTensorPositive(Tensor& t)
                        eigvals[0], eigvals[1], eigvals[2]);
 }
 
+void ShowUncertaintyGlyphsImpl::diffT(TensorGlyphBuilder& builder, const DenseMatrix& mean, const
+                                      DenseMatrix& finiteDiff, SuperquadricPointParams& params)
+{
+  auto t1 = symmetricTensorFromMandel(mean - finiteDiff);
+  auto t2 = symmetricTensorFromMandel(mean + finiteDiff);
+
+  std::vector<Point> points;
+  for (const auto& t : {t1, t2})
+  {
+    builder.setTensor(t);
+    bulider.makeTensorPositive();
+    bool linear = builder.isLinear();
+    builder.computeAAndB();
+    params.A = builder.getA();
+    params.B = builder.getB();
+    points.push_back(buider.evaluateSuperquadricPoint(linear, params));
+  }
+
+  return points[0] = points[1];
+}
+
 void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
 {
   const static double h = 0.000001;
@@ -235,41 +252,45 @@ void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
 
   for (int f = 0; f < fieldSize_; ++f)
   {
-    Tensor t = meanTensors_[f];
-    makeTensorPositive(t);
-    std::vector<Vector> eigvecs(3);
-    t.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
+    TensorGlyphBuilder builder(meanTensors_[f], points_[0][f]);
+    builder.setResolution(resolution_);
+    builder.makeTensorPositive();
+    builder.computeTransforms();
+    builder.postScaleTransorms();
+    builder.computeSinCosTable(false);
 
-    std::vector<double> eigvals(3);
-    t.get_eigenvalues(eigvals[0], eigvals[1], eigvals[2]);
+    auto trans = builder.getTrans();
+    bool linear = builder.isLinear();
+    SuperquadricPointParams params;
+    params.A = builder.getA();
+    params.B = builder.getB();
 
-    Transform rotate = Transform(Point(0,0,0), eigvecs[0], eigvecs[1], eigvecs[2]);
-    Transform transform = rotate;
-    transform.pre_translate((Vector) points_[0][f]);
+    Point point;
 
-    Vector eigvalsVector(eigvals[0], eigvals[1], eigvals[2]);
-    transform.post_scale(Vector(1.0,1.0,1.0) * eigvalsVector);
-    rotate.post_scale(Vector(1.0,1.0,1.0) / eigvalsVector);
+    std::vector<DenseMatrix> diffs(6);
+    auto finiteDiff = DenseMatrix(6, 1, 0.0);
 
-    int nu = resolution_ + 1;
-    int nv = resolution_;
-
-    SinCosTable tab1(nu, 0, 2 * M_PI);
-    SinCosTable tab2(nv, 0, M_PI);
-
-    double eigvalSum = (eigvals[0] + eigvals[1] + eigvals[2]);
-    double cl = (eigvals[0] - eigvals[1]) / eigvalSum;
-    double cp = 2.0 * (eigvals[1] - eigvals[2]) / eigvalSum;
-    bool linear = cl >= cp;
-
-    double A = linear ? spow((1.0 - cp), emphasis_) : spow((1.0 - cl), emphasis_);
-    double B = linear ? spow((1.0 - cl), emphasis_) : spow((1.0 - cp), emphasis_);
-
-
-    // Loop vertices on superquadric tensor
     for (int v=0; v < nv-1; v++)
+    {
+      params.sinPhi = builder.computeSinPhi(v);
+      params.cosPhi = builder.computeCosPhi(v);
       for (int u=0; u<nu; u++)
-        auto point = getSuperquadricTensorPoint(u, v, transform, tab1, tab2, A, B, linear);
+      {
+        params.sinTheta = builder.computeSinTheta(u);
+        params.cosTheta = builder.computeCosTheta(u);
+        point = builder.evaluateSuperquadricPoint(linear, params);
+        point = trans * point;
+
+        auto mean = meanTensors_[f].mandel();
+        for (int i = 0; i < 6; ++i)
+        {
+          finiteDiff.put(i, 0, hHalf);
+          diffs[i] = diffT(builder, mean, finiteDiff, params) / h;
+          finiteDiff.put(i, 0, 0.0);
+        }
+      }
+    }
+
   }
 }
 
