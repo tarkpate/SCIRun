@@ -30,8 +30,10 @@ void ShowUncertaintyGlyphs::execute()
 
   if(needToExecute())
   {
-    auto output = algo().run(withInputData((InputFields, fields)));
+    auto algorithm = ShowUncertaintyGlyphsAlgorithm();
+    auto output = algorithm.run(*this, withInputData((InputFields, fields)));
     sendOutputFromAlgorithm(MeanTensorField, output);
+    sendOutputFromAlgorithm(OutputGeom, output);
   }
 }
 

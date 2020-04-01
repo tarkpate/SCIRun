@@ -50,6 +50,7 @@
 
 using namespace SCIRun;
 using namespace Core::Geometry;
+using namespace Core::Datatypes;
 
 Tensor::Tensor() : l1_(0), l2_(0), l3_(0), have_eigens_(false)
 {
@@ -253,13 +254,14 @@ double Tensor::norm() const
   return (a);
 }
 
-Vector Tensor::euclidean_norm() const
+Vector Tensor::normalized_eigvals() const
 {
   auto eigvals = Vector(l1_, l2_, l3_);
   eigvals.normalize();
   return eigvals;
 }
 
+// Frobenius norm
 double Tensor::magnitude()
 {
   double eigenval1, eigenval2, eigenval3;
@@ -337,8 +339,14 @@ Vector Tensor::operator*(const Vector& v) const
 Tensor Tensor::operator/(const double s) const
 {
   Tensor t1(*this);
-  double div = 1/s;
-  return t1 * div;
+  for (int i=0; i<3; i++)
+    for (int j=0; j<3; j++)
+      t1.mat_[i][j]/=s;
+  if (t1.have_eigens_) {
+    t1.e1_/=s; t1.e2_/=s; t1.e3_/=s;
+    t1.l1_/=s; t1.l2_/=s; t1.l3_/=s;
+  }
+  return t1;
 }
 
 void Tensor::build_eigens_from_mat()

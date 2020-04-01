@@ -45,6 +45,7 @@
 #include <Core/Containers/Array1.h>
 #include <Core/GeometryPrimitives/Vector.h>
 #include <Core/GeometryPrimitives/share.h>
+#include <Core/Datatypes/DenseMatrix.h>
 
 #include <iosfwd>
 #include <vector>
@@ -95,10 +96,10 @@ public:
   const Vector &get_eigenvector2() const { ASSERT(have_eigens_); return e2_; }
   const Vector &get_eigenvector3() const { ASSERT(have_eigens_); return e3_; }
   void get_eigenvalues(double &l1, double &l2, double &l3);
-  DenseMatrix mandel() const;
+  Core::Datatypes::DenseMatrix mandel() const;
 
   double norm() const;
-  Vector euclidean_norm() const;
+  Vector normalized_eigvals() const;
   void normal();
   double magnitude();
 
@@ -184,12 +185,12 @@ Tensor symmetricTensorFromSixElementArray(const Indexable& array)
 template <typename Indexable>
 Tensor symmetricTensorFromMandel(const Indexable& array)
 {
-return Tensor(array[0],
-              array[3],
-              array[4],
-              array[1],
-              array[5],
-              array[2]);
+return Tensor(array(0),
+              array(3),
+              array(4),
+              array(1),
+              array(5),
+              array(2));
 }
 
 template <typename Indexable>

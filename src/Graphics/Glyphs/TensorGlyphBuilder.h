@@ -72,23 +72,26 @@ public:
   void generateEllipsoid(GlyphConstructor& constructor, bool half);
   void generateBox(GlyphConstructor& constructor);
 
-  Core::Geometry::Point evaluateSuperquadricPointLinear(SuperquadricPointParams& params);
-  Core::Geometry::Point evaluateSuperquadricPointPlanar(SuperquadricPointParams& params);
-  Core::Geometry::Point evaluateSuperquadricPoint(bool linear, SuperquadricPointParams& params);
+  Core::Geometry::Point evaluateSuperquadricPointLinear(const SuperquadricPointParams& params);
+  Core::Geometry::Point evaluateSuperquadricPointPlanar(const SuperquadricPointParams& params);
+  Core::Geometry::Point evaluateSuperquadricPoint(bool linear, const SuperquadricPointParams& params);
   Core::Geometry::Point evaluateEllipsoidPoint(EllipsoidPointParams& params);
 
   void computeTransforms();
   void computeSinCosTable(bool half);
   void postScaleTransorms();
-  Transform getTrans();
+  Core::Geometry::Transform getTrans();
+  Core::Geometry::Transform getRotate();
   bool isLinear();
-  void computeAAndB();
+  void computeAAndB(double emphasis);
   double getA();
   double getB();
   double computeSinPhi(int v);
   double computeCosPhi(int v);
   double computeSinTheta(int u);
   double computeCosTheta(int u);
+  void setTensor(const Core::Geometry::Tensor &t);
+  Core::Geometry::Tensor getTensor() const;
 private:
   void generateBoxSide(GlyphConstructor& constructor, const Core::Geometry::Vector& p1, const Core::Geometry::Vector& p2,
                        const Core::Geometry::Vector& p3, const Core::Geometry::Vector& p4,
@@ -110,6 +113,7 @@ private:
   int nv_ = 0;
   int nu_ = 0;
   double cl_, cp_;
+  double A_, B_;
 };
 }}
 

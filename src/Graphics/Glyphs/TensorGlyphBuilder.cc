@@ -40,6 +40,19 @@ TensorGlyphBuilder::TensorGlyphBuilder(const Tensor& t, const Point& center)
 {
   t_ = t;
   center_ = Point(center);
+  trans_ = Transform();
+  rotate_ = Transform();
+}
+
+void TensorGlyphBuilder::setTensor(const Tensor& t)
+{
+  t_ = t;
+}
+
+
+Tensor TensorGlyphBuilder::getTensor() const
+{
+  return t_;
 }
 
 void TensorGlyphBuilder::scaleTensor(double scale)
@@ -67,9 +80,10 @@ void TensorGlyphBuilder::normalizeTensor()
   for (auto& v : eigvecs)
     v.normalize();
 
-  auto norm = t_.euclidean_norm();
-  t_.set_outside_eigens(eigvecs[0] * norm[0], eigvecs[1] * norm[1], eigvecs[2] * norm[2],
-                        norm[0], norm[1], norm[2]);
+  auto normEigvals = t_.normalized_eigvals();
+  t_.set_outside_eigens(eigvecs[0] * normEigvals[0], eigvecs[1] * normEigvals[1],
+                        eigvecs[2] * normEigvals[2],
+                        normEigvals[0], normEigvals[1], normEigvals[2]);
 }
 
 void TensorGlyphBuilder::setColor(const ColorRGB& color)
@@ -177,14 +191,17 @@ void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool h
 
     for (int u = 0; u < nu_; ++u)
     {
-      double sinTheta = tab1_.sin(u);
-      double cosTheta = tab1_.cos(u);
+      EllipsoidPointParams params;
+      params.sinTheta = tab1_.sin(u);
+      params.cosTheta = tab1_.cos(u);
 
       // Transorm points and add to points list
       constructor.setOffset();
       for (int i = 0; i < 2; ++i)
       {
-        Point point = evaluateEllipsoidPoint({sinPhi[i], cosPhi[i], sinTheta, cosTheta});
+        params.sinPhi = sinPhi[i];
+        params.cosPhi = cosPhi[i];
+        Point point = evaluateEllipsoidPoint(params);
         Vector pVector = Vector(trans_ * point);
 
         Vector normal;
@@ -226,8 +243,9 @@ bool TensorGlyphBuilder::isLinear()
   return cl_ >= cp_;
 }
 
-void TensorGlyphBuilder::computeAAndB()
+void TensorGlyphBuilder::computeAAndB(double emphasis)
 {
+  bool linear = isLinear();
   double pPower = GlyphGeomUtility::spow((1.0 - cp_), emphasis);
   double lPower = GlyphGeomUtility::spow((1.0 - cl_), emphasis);
   A_ = linear ? pPower : lPower;
@@ -329,7 +347,7 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   constructor.popIndicesNTimes(6);
 }
 
-Point TensorGlyphBuilder::evaluateSuperquadricPoint(bool linear, SuperquadricPointParams& params)
+Point TensorGlyphBuilder::evaluateSuperquadricPoint(bool linear, const SuperquadricPointParams& params)
 {
   if (linear)
     return evaluateSuperquadricPointLinear(params);
@@ -338,7 +356,7 @@ Point TensorGlyphBuilder::evaluateSuperquadricPoint(bool linear, SuperquadricPoi
 }
 
 // Generate around x-axis
-Point TensorGlyphBuilder::evaluateSuperquadricPointLinear(SuperquadricPointParams& params)
+Point TensorGlyphBuilder::evaluateSuperquadricPointLinear(const SuperquadricPointParams& params)
 {
   double x, y, z;
   x =  GlyphGeomUtility::spow(params.cosPhi, params.B);
@@ -350,7 +368,7 @@ Point TensorGlyphBuilder::evaluateSuperquadricPointLinear(SuperquadricPointParam
 }
 
 // Generate around z-axis
-Point TensorGlyphBuilder::evaluateSuperquadricPointPlanar(SuperquadricPointParams& params)
+Point TensorGlyphBuilder::evaluateSuperquadricPointPlanar(const SuperquadricPointParams& params)
 {
   double x, y, z;
   x = GlyphGeomUtility::spow(params.sinPhi, params.B)
@@ -366,7 +384,7 @@ void TensorGlyphBuilder::generateBox(GlyphConstructor& constructor)
   computeTransforms();
 
   std::vector<Vector> box_points = generateBoxPoints();
-  std::vector<Vector> normals = rotate_.get_column_vectors();
+  std::vector<Vector> normals = rotate_.get_rotation();
   if(flatTensor_)
     for(int d = 0; d < DIMENSIONS_; ++d)
       normals[d] = zeroNorm_;
@@ -407,4 +425,9 @@ std::vector<Vector> TensorGlyphBuilder::generateBoxPoints()
 Transform TensorGlyphBuilder::getTrans()
 {
   return trans_;
+}
+
+Transform TensorGlyphBuilder::getRotate()
+{
+  return rotate_;
 }

@@ -1,3 +1,31 @@
+/*
+   For more information, please see: http://software.sci.utah.edu
+
+   The MIT License
+
+   Copyright (c) 2020 Scientific Computing and Imaging Institute,
+   University of Utah.
+
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of this software and associated documentation files (the "Software"),
+   to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+   and/or sell copies of the Software, and to permit persons to whom the
+   Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included
+   in all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+*/
+
+
 #include <Core/Algorithms/Visualization/ShowUncertaintyGlyphsAlgorithm.h>
 #include <Core/Algorithms/Base/AlgorithmVariableNames.h>
 #include <Core/Algorithms/Base/AlgorithmPreconditions.h>
@@ -8,21 +36,31 @@
 #include <Core/Datatypes/Mesh/MeshFacade.h>
 #include <Core/Datatypes/DenseMatrix.h>
 #include <Graphics/Glyphs/GlyphGeom.h>
+#include <Core/Datatypes/Geometry.h>
+#include <Graphics/Datatypes/GeometryImpl.h>
+#include <Graphics/Glyphs/TensorGlyphBuilder.h>
+#include <Graphics/Glyphs/GlyphConstructor.h>
+#include <Graphics/Glyphs/GlyphGeomUtility.h>
 
 using namespace SCIRun;
 using namespace Graphics;
+using namespace Graphics::Datatypes;
+using namespace Core;
 using namespace Core::Datatypes;
 using namespace Core::Algorithms;
 using namespace Core::Geometry;
 using namespace Core::Algorithms::Visualization;
 
+using GGU = GlyphGeomUtility;
+
 const AlgorithmOutputName ShowUncertaintyGlyphsAlgorithm::MeanTensorField("MeanTensorField");
+const AlgorithmOutputName ShowUncertaintyGlyphsAlgorithm::OutputGeom("OutputGeom");
 
 class ShowUncertaintyGlyphsImpl
 {
 public:
   ShowUncertaintyGlyphsImpl();
-  void run(const FieldList &fields);
+  GeometryHandle run(const GeometryIDGenerator& idGen, const FieldList &fields);
   FieldHandle getMeanTensors() const;
 private:
   void computeMeanTensors();
@@ -33,14 +71,13 @@ private:
   void getPointsForFields(FieldHandle field, std::vector<int> &indices, std::vector<Point> &points);
   void getTensors(const FieldList &fields);
   void computeOffsetSurface();
-  Point getSuperquadricTensorPoint(int u, int v, Transform& transform,
-                                   SinCosTable& tab1, SinCosTable& tab2,
-                                   double A, double B, bool linear);
-  Vector getSuperquadricTensorNormal(int u, int v, Transform& rotate,
-                                     SinCosTable& tab1, SinCosTable& tab2,
-                                     double A, double B, bool linear);
-  void makeTensorPositive(Tensor& t);
+  double evaluateSuperquadricImpl(bool linear, const Point& p, double A, double B);
+  double evaluateSuperquadricImplLinear(const Point& p, double A, double B);
+  double evaluateSuperquadricImplPlanar(const Point& p, double A, double B);
+  double diffT(const TensorGlyphBuilder& builder, const DenseMatrix& mean, const
+               DenseMatrix& finiteDiff, const Point& p);
 
+  GlyphConstructor constructor_;
   int fieldCount_ = 0;
   int fieldSize_ = 0;
 
@@ -52,7 +89,7 @@ private:
 
   //TODO make ui params
   double emphasis_ = 3.0;
-  int resolution_ = 10;
+  int resolution_ = 20;
 };
 
 ShowUncertaintyGlyphsAlgorithm::ShowUncertaintyGlyphsAlgorithm()
@@ -61,6 +98,7 @@ ShowUncertaintyGlyphsAlgorithm::ShowUncertaintyGlyphsAlgorithm()
 
 ShowUncertaintyGlyphsImpl::ShowUncertaintyGlyphsImpl()
 {
+  constructor_ = GlyphConstructor();
 }
 
 //TODO move to separate algo
@@ -72,14 +110,37 @@ enum FieldDataType
   cell
 };
 
-void ShowUncertaintyGlyphsImpl::run(const FieldList &fields)
+GeometryHandle ShowUncertaintyGlyphsImpl::run(const GeometryIDGenerator& idgen, const FieldList &fields)
 {
   getPoints(fields);
   verifyData(fields);
   getTensors(fields);
   computeMeanTensors();
   computeCovarianceMatrices();
+
   computeOffsetSurface();
+
+  // Creates id
+  std::string idname = "ShowUncertaintyGlyphs";
+  // if(!state->getValue(ShowFieldGlyphs::FieldName).toString().empty())
+    // idname += GeometryObject::delimiter + state->getValue(ShowFieldGlyphs::FieldName).toString() + " (from " + moduleId_ +")";
+
+  RenderState renState;
+  renState.set(RenderState::USE_NORMALS, true);
+  renState.set(RenderState::IS_ON, true);
+  renState.set(RenderState::USE_TRANSPARENCY, true);
+  renState.mGlyphType = RenderState::GlyphType::SUPERQUADRIC_TENSOR_GLYPH;
+  renState.defaultColor = ColorRGB(1.0, 1.0, 1.0);
+  renState.set(RenderState::USE_DEFAULT_COLOR, true);
+  SpireIBO::PRIMITIVE primIn = SpireIBO::PRIMITIVE::TRIANGLES;
+  auto vmesh = fields[0]->vmesh();
+
+  auto geom(boost::make_shared<GeometryObjectSpire>(idgen, idname, true));
+  constructor_.buildObject(*geom, geom->uniqueID(), true, 0.5,
+                           ColorScheme::COLOR_UNIFORM, renState, primIn, vmesh->get_bounding_box(),
+                           true, nullptr);
+
+  return geom;
 }
 
 void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
@@ -101,154 +162,72 @@ void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
   }
 }
 
-void reorderTensor(std::vector<Vector>& eigvectors, std::vector<double>& eigvals)
+double ShowUncertaintyGlyphsImpl::evaluateSuperquadricImpl(bool linear, const Point& p,
+                                                           double A, double B)
 {
-  std::vector<int> indices = {0, 1, 2};
-  std::vector<std::pair<double, Vector>> sortList =
-    { std::make_pair(eigvals[0], eigvectors[0]),
-      std::make_pair(eigvals[1], eigvectors[1]),
-      std::make_pair(eigvals[2], eigvectors[2]) };
-
-  std::sort(std::begin(sortList), std::end(sortList));
-
-  for(int i = 0; i < 3; ++i)
-  {
-    eigvals[i] = sortList[i].first;
-    eigvectors[i] = sortList[i].second;
-  }
-}
-
-inline double spow(double e, double x)
-{
-  // This for round off of very small numbers.
-  if( abs( e ) < 1.0e-6)
-    e = 0.0;
-
-  if (e < 0.0)
-  {
-    return (double)(pow(abs(e), x) * -1.0);
-  }
+  if (linear)
+    return evaluateSuperquadricImplLinear(p, A, B);
   else
-  {
-    return (double)(pow(e, x));
-  }
+    return evaluateSuperquadricImplPlanar(p, A, B);
 }
 
-Point ShowUncertaintyGlyphsImpl::getSuperquadricTensorPoint(int u, int v, Transform& transform,
-                                                            SinCosTable& tab1, SinCosTable& tab2,
-                                                            double A, double B, bool linear)
+// Generate around x-axis
+double ShowUncertaintyGlyphsImpl::evaluateSuperquadricImplLinear(const Point& p, double A, double B)
 {
-  double nr = tab2.sin(v);
-  double nz = tab2.cos(v);
-
-  double nx = tab1.sin(u);
-  double ny = tab1.cos(u);
-
-  double x, y, z;
-  if (linear) // Generate around x-axis
-  {
-    x =  spow(nz, B);
-    y = -spow(nr, B) * spow(ny, A);
-    z =  spow(nr, B) * spow(nx, A);
-  }
-  else       // Generate around z-axis
-  {
-    x = spow(nr, B) * spow(nx, A);
-    y = spow(nr, B) * spow(ny, A);
-    z = spow(nz, B);
-  }
-  return Point(transform * Point(x, y, z));
+  double twoDivA = 2.0 / A;
+  double twoDivB = 2.0 / B;
+  return GGU::spow(GGU::spow(std::abs(p.y()), twoDivA) + GGU::spow(std::abs(p.z()), twoDivA), A/B)
+    + GGU::spow(std::abs(p.x()), twoDivB) - 1;
 }
 
-// TODO delete if not used later
-Vector ShowUncertaintyGlyphsImpl::getSuperquadricTensorNormal(int u, int v, Transform& rotate,
-                                                              SinCosTable& tab1, SinCosTable& tab2,
-                                                              double A, double B, bool linear)
+// Generate around z-axis
+double ShowUncertaintyGlyphsImpl::evaluateSuperquadricImplPlanar(const Point& p, double A, double B)
 {
-  double nr = tab2.sin(v);
-  double nz = tab2.cos(v);
-
-  double nx = tab1.sin(u);
-  double ny = tab1.cos(u);
-
-  double nnx, nny, nnz;
-  if(linear)
-  {
-    nnx =  spow(nz, 2.0-B);
-    nny = -spow(nr, 2.0-B) * spow(ny, 2.0-A);
-    nnz =  spow(nr, 2.0-B) * spow(nx, 2.0-A);
-  }
-  else
-  {
-    nnx = spow(nr, 2.0-B) * spow(nx, 2.0-A);
-    nny = spow(nr, 2.0-B) * spow(ny, 2.0-A);
-    nnz = spow(nz, 2.0-B);
-  }
-  Vector normal = rotate * Vector(nnx, nny, nnz);
-  normal.safe_normalize();
-  return normal;
+  double twoDivA = 2.0 / A;
+  double twoDivB = 2.0 / B;
+  return GGU::spow(GGU::spow(std::abs(p.x()), twoDivA) + GGU::spow(std::abs(p.y()), twoDivA), A/B)
+    + GGU::spow(std::abs(p.z()), twoDivB) - 1;
 }
 
-void ShowUncertaintyGlyphsImpl::makeTensorPositive(Tensor& t)
+double ShowUncertaintyGlyphsImpl::diffT(const TensorGlyphBuilder& builder, const DenseMatrix& t1,
+                                        const DenseMatrix& t2, const Point& p)
 {
-  static const double zeroThreshold = 0.000001;
-  std::vector<Vector> eigvecs(3);
-  t.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
-
-  double eigval1, eigval2, eigval3;
-  t.get_eigenvalues(eigval1, eigval2, eigval3);
-  std::vector<double> eigvals = {fabs(eigval1), fabs(eigval2), fabs(eigval3)};
-  reorderTensor(eigvecs, eigvals);
-
-  for (auto& e : eigvals)
-    if(e <= zeroThreshold)
-      e = 0;
-
-  bool eig_x_0 = eigvals[0] == 0;
-  bool eig_y_0 = eigvals[1] == 0;
-  bool eig_z_0 = eigvals[2] == 0;
-
-  bool flatTensor = (eig_x_0 + eig_y_0 + eig_z_0) >= 1;
-  if (flatTensor)
+  std::vector<double> dist(2);
+  for (int i = 0; i < 2; ++i)
   {
-    // Check for zero eigenvectors
-    if (eig_x_0)
-      eigvecs[0] = Cross(eigvecs[1], eigvecs[2]);
-    else if (eig_y_0)
-      eigvecs[1] = Cross(eigvecs[0], eigvecs[2]);
-    else if (eig_z_0)
-      eigvecs[2] = Cross(eigvecs[0], eigvecs[1]);
+    auto tMandel = (i == 0) ? t1 : t2;
+
+    TensorGlyphBuilder newBuilder = builder;
+    newBuilder.setTensor(symmetricTensorFromMandel(tMandel));
+    // std::cout << "t " << symmetricTensorFromMandel(t) << "\n";
+    newBuilder.makeTensorPositive();
+    newBuilder.computeTransforms();
+    newBuilder.postScaleTransorms();
+    bool linear = newBuilder.isLinear();
+    newBuilder.computeAAndB(emphasis_);
+    double A = newBuilder.getA();
+    double B = newBuilder.getB();
+    const auto rotate = newBuilder.getRotate();
+    auto rotateInv = rotate;
+    rotateInv.invert();
+
+    auto t = newBuilder.getTensor();
+    auto pseudoInv = Vector();
+    t.get_eigenvalues(pseudoInv[0], pseudoInv[1], pseudoInv[2]);
+    pseudoInv /= t.magnitude();
+
+    auto newP = (pseudoInv * Vector(rotateInv * p));
+    dist[i] = evaluateSuperquadricImpl(linear, Point(newP), A, B);
   }
 
-  t.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2],
-                       eigvals[0], eigvals[1], eigvals[2]);
-}
-
-void ShowUncertaintyGlyphsImpl::diffT(TensorGlyphBuilder& builder, const DenseMatrix& mean, const
-                                      DenseMatrix& finiteDiff, SuperquadricPointParams& params)
-{
-  auto t1 = symmetricTensorFromMandel(mean - finiteDiff);
-  auto t2 = symmetricTensorFromMandel(mean + finiteDiff);
-
-  std::vector<Point> points;
-  for (const auto& t : {t1, t2})
-  {
-    builder.setTensor(t);
-    bulider.makeTensorPositive();
-    bool linear = builder.isLinear();
-    builder.computeAAndB();
-    params.A = builder.getA();
-    params.B = builder.getB();
-    points.push_back(buider.evaluateSuperquadricPoint(linear, params));
-  }
-
-  return points[0] = points[1];
+  return dist[0] - dist[1];
 }
 
 void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
 {
   const static double h = 0.000001;
   const static double hHalf = 0.5 * h;
+  auto origin = Point(0,0,0);
 
   for (int f = 0; f < fieldSize_; ++f)
   {
@@ -258,39 +237,113 @@ void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
     builder.computeTransforms();
     builder.postScaleTransorms();
     builder.computeSinCosTable(false);
+    builder.isLinear();
+    builder.computeAAndB(emphasis_);
+    const auto trans = builder.getTrans();
+    const auto rotate = builder.getRotate();
+    auto rotateInv = rotate;
+    rotateInv.invert();
+    std::cout << "rot " << rotate << "\n";
+    std::cout << "rot invert " << rotateInv << "\n";
 
-    auto trans = builder.getTrans();
-    bool linear = builder.isLinear();
+    TensorGlyphBuilder normBuilder(meanTensors_[f], origin);
+    normBuilder.setResolution(resolution_);
+    normBuilder.makeTensorPositive();
+    normBuilder.normalizeTensor();
+    normBuilder.computeSinCosTable(false);
+
+    auto tMandel = normBuilder.getTensor().mandel();
+    bool linear = normBuilder.isLinear();
+    normBuilder.computeAAndB(emphasis_);
     SuperquadricPointParams params;
     params.A = builder.getA();
     params.B = builder.getB();
 
-    Point point;
+    SuperquadricPointParams normalParams;
+    normalParams.A = 2.0 - params.A;
+    normalParams.B = 2.0 - params.B;
 
-    std::vector<DenseMatrix> diffs(6);
     auto finiteDiff = DenseMatrix(6, 1, 0.0);
+    double fro = meanTensors_[f].magnitude();
 
+    int nv = resolution_;
+    int nu = resolution_ + 1;
     for (int v=0; v < nv-1; v++)
     {
-      params.sinPhi = builder.computeSinPhi(v);
-      params.cosPhi = builder.computeCosPhi(v);
+      double sinPhi[2];
+      sinPhi[0] = builder.computeSinPhi(v);
+      sinPhi[1] = builder.computeSinPhi(v+1);
+
+      double cosPhi[2];
+      cosPhi[0] = builder.computeCosPhi(v);
+      cosPhi[1] = builder.computeCosPhi(v+1);
+
       for (int u=0; u<nu; u++)
       {
-        params.sinTheta = builder.computeSinTheta(u);
-        params.cosTheta = builder.computeCosTheta(u);
-        point = builder.evaluateSuperquadricPoint(linear, params);
-        point = trans * point;
+        constructor_.setOffset();
+        params.sinTheta = normalParams.sinTheta = builder.computeSinTheta(u);
+        params.cosTheta = normalParams.cosTheta = builder.computeCosTheta(u);
 
-        auto mean = meanTensors_[f].mandel();
-        for (int i = 0; i < 6; ++i)
+        for(int i = 0; i < 2; ++i)
         {
-          finiteDiff.put(i, 0, hHalf);
-          diffs[i] = diffT(builder, mean, finiteDiff, params) / h;
-          finiteDiff.put(i, 0, 0.0);
+          params.sinPhi = normalParams.sinPhi = sinPhi[i];
+          params.cosPhi = normalParams.cosPhi = cosPhi[i];
+
+          auto p = Vector(trans * builder.evaluateSuperquadricPoint(linear, params));
+          auto pseudoInv = Vector();
+          meanTensors_[f].get_eigenvalues(pseudoInv[0], pseudoInv[1], pseudoInv[2]);
+          pseudoInv /= meanTensors_[f].magnitude();
+
+          // Surface Derivative
+          DenseMatrix nn(3, 1, 0.0);
+          for (int j = 0; j < 3; ++j)
+          {
+            p[j] += hHalf;
+            auto newP = Point(pseudoInv * (p));
+            double d1 = evaluateSuperquadricImpl(linear, newP, params.A, params.B);
+
+            p[j] -= h;
+            newP = Point(pseudoInv * (p));
+            double d2 = evaluateSuperquadricImpl(linear, newP, params.A, params.B);
+            p[j] += hHalf;
+            // std::cout << "d1 " << d1 << "\n";
+            // std::cout << "d2 " << d2 << "\n";
+            // std::cout << "(d1 - d2) " << (d1 - d2) << "\n";
+            nn(j) = (d1 - d2) / h;
+          }
+          std::cout << "\n";
+          // std::cout << "nn " << nn << "\n";
+
+          DenseMatrix qn(6, 1, 0.0);
+          for (int j = 0; j < 6; ++j)
+          {
+            finiteDiff.put(j, 0, hHalf);
+            qn(j) = diffT(normBuilder, tMandel + finiteDiff, tMandel - finiteDiff, Point(p)) /h;
+            finiteDiff.put(j, 0, 0.0);
+          }
+          qn /= nn.norm();
+
+          double q = std::sqrt(std::abs((qn.transpose() * covarianceMatrices_[f] * qn)
+                                        .eval().eval().eval().value()));
+          // std::cout << "q " << q << "\n";
+          auto n = nn/nn.norm();
+          auto nVector = Vector(n(0), n(1), n(2));
+
+          auto normal = Vector(builder.evaluateSuperquadricPoint(linear, normalParams));
+          normal = rotate * normal;
+          normal.safe_normalize();
+
+          auto offsetP = p + q * normal;
+
+          // std::cout << "offsetP " << offsetP << "\n\n";
+          constructor_.addVertex(offsetP, nVector, ColorRGB(1.0, 1.0, 1.0));
         }
+
+        constructor_.addIndicesToOffset(0, 1, 2);
+        constructor_.addIndicesToOffset(2, 1, 3);
       }
     }
-
+    constructor_.popIndicesNTimes(6);
   }
 }
 
@@ -427,6 +480,20 @@ FieldHandle ShowUncertaintyGlyphsImpl::getMeanTensors() const
 }
 
 //main algorithm function
+AlgorithmOutput ShowUncertaintyGlyphsAlgorithm::run(const GeometryIDGenerator& idGen, const AlgorithmInput &input) const
+{
+  auto fields = input.getList<Field>(Variables::InputFields);
+  if (fields.empty())
+    THROW_ALGORITHM_INPUT_ERROR("No input fields given");
+
+  auto impl = ShowUncertaintyGlyphsImpl();
+
+  AlgorithmOutput output;
+  output[OutputGeom] = impl.run(idGen, fields);
+  output[MeanTensorField] = impl.getMeanTensors();
+  return output;
+}
+
 AlgorithmOutput ShowUncertaintyGlyphsAlgorithm::run(const AlgorithmInput &input) const
 {
   auto fields = input.getList<Field>(Variables::InputFields);
@@ -436,7 +503,6 @@ AlgorithmOutput ShowUncertaintyGlyphsAlgorithm::run(const AlgorithmInput &input)
   auto impl = ShowUncertaintyGlyphsImpl();
 
   AlgorithmOutput output;
-  impl.run(fields);
   output[MeanTensorField] = impl.getMeanTensors();
   return output;
 }
