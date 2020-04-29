@@ -64,7 +64,7 @@ public:
   TensorGlyphBuilder(const Core::Geometry::Tensor& t, const Core::Geometry::Point& center);
   void scaleTensor(double scale);
   void reorderTensorValues(std::vector<Core::Geometry::Vector>& eigvecs, std::vector<double>& eigvals);
-  void makeTensorPositive();
+  void makeTensorPositive(bool reorder = false, bool makeGlyph = true);
   void normalizeTensor();
   void setColor(const Core::Datatypes::ColorRGB& color);
   void setResolution(double resolution);
@@ -82,6 +82,7 @@ public:
   void postScaleTransorms();
   Core::Geometry::Transform getTrans();
   Core::Geometry::Transform getRotate();
+  Core::Geometry::Transform getScale();
   bool isLinear();
   void computeAAndB(double emphasis);
   double getA();
@@ -92,13 +93,13 @@ public:
   double computeCosTheta(int u);
   void setTensor(const Core::Geometry::Tensor &t);
   Core::Geometry::Tensor getTensor() const;
+  std::vector<Core::Geometry::Vector> getEigenVectors();
+  std::vector<double> getEigenValues();
 private:
   void generateBoxSide(GlyphConstructor& constructor, const Core::Geometry::Vector& p1, const Core::Geometry::Vector& p2,
                        const Core::Geometry::Vector& p3, const Core::Geometry::Vector& p4,
                        const Core::Geometry::Vector& normal);
   std::vector<Core::Geometry::Vector> generateBoxPoints();
-  std::vector<Core::Geometry::Vector> getEigenVectors();
-  std::vector<double> getEigenValues();
 
   const static int DIMENSIONS_ = 3;
   const static int BOX_FACE_POINTS_ = 4;

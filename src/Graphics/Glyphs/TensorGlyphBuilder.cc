@@ -81,8 +81,7 @@ void TensorGlyphBuilder::normalizeTensor()
     v.normalize();
 
   auto normEigvals = t_.normalized_eigvals();
-  t_.set_outside_eigens(eigvecs[0] * normEigvals[0], eigvecs[1] * normEigvals[1],
-                        eigvecs[2] * normEigvals[2],
+  t_.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2],
                         normEigvals[0], normEigvals[1], normEigvals[2]);
 }
 
@@ -111,7 +110,8 @@ void TensorGlyphBuilder::reorderTensorValues(std::vector<Vector>& eigvecs,
     eigvecs[d] = sortList[d].second;
   }
 }
-void TensorGlyphBuilder::makeTensorPositive()
+
+void TensorGlyphBuilder::makeTensorPositive(bool reorder, bool makeGlyph)
 {
   static const double zeroThreshold = 0.000001;
 
@@ -124,11 +124,19 @@ void TensorGlyphBuilder::makeTensorPositive()
       e = 0;
   }
 
+
   // These are exactly zero after thresholding
   flatTensor_ = eigvals[0] == 0 || eigvals[1] == 0 || eigvals[2] == 0;
 
-  if (flatTensor_)
-    reorderTensorValues(eigvecs, eigvals);
+  // if (flatTensor_ || reorder)
+  // reorderTensorValues(eigvecs, eigvals);
+
+  if (makeGlyph)
+  {
+    auto cross = Cross(eigvecs[0], eigvecs[1]);
+    if (Dot(cross, eigvecs[2]) < 2e-12)
+      eigvecs[2] = cross;
+  }
 
   for (int d = 0; d < DIMENSIONS_; ++d)
     if (eigvals[d] == 0)
@@ -138,8 +146,7 @@ void TensorGlyphBuilder::makeTensorPositive()
       break;
     }
 
-  t_.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2],
-                        eigvals[0], eigvals[1], eigvals[2]);
+  t_.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2], eigvals[0], eigvals[1], eigvals[2]);
 }
 
 void TensorGlyphBuilder::computeSinCosTable(bool half)
@@ -169,15 +176,21 @@ void TensorGlyphBuilder::postScaleTransorms()
   auto eigvals = getEigenValues();
   Vector eigvalsVector(eigvals[0], eigvals[1], eigvals[2]);
 
-  trans_.post_scale( Vector(1.0,1.0,1.0) * eigvalsVector);
-  rotate_.post_scale(Vector(1.0,1.0,1.0) / eigvalsVector);
+  trans_.post_scale(eigvalsVector);
+  // rotate_.post_scale(Vector(1.0,1.0,1.0) / eigvalsVector);
 }
 
 void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool half)
 {
+  makeTensorPositive(true);
   computeTransforms();
   postScaleTransorms();
   computeSinCosTable(half);
+
+  auto eigvals = getEigenValues();
+  Vector eigvalsVector(eigvals[0], eigvals[1], eigvals[2]);
+  Transform rotateThenInvScale = rotate_;
+  rotateThenInvScale.post_scale(Vector(1.0,1.0,1.0) / eigvalsVector);
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
@@ -213,7 +226,7 @@ void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool h
         }
         else
         {
-          normal = rotate_ * Vector(point);
+          normal = rotateThenInvScale * Vector(point);
           normal.safe_normalize();
         }
 
@@ -284,7 +297,16 @@ double TensorGlyphBuilder::computeCosTheta(int u)
 
 void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis)
 {
-  makeTensorPositive();
+  makeTensorPositive(true);
+  auto eigvals = getEigenValues();
+  auto eigvecs = getEigenVectors();
+  std::cout << "eigvec0 " << eigvecs[0] << "\n";
+  std::cout << "eigvec1 " << eigvecs[1] << "\n";
+  std::cout << "eigvec2 " << eigvecs[2] << "\n";
+  std::cout << "eigval0 " << eigvals[0] << "\n";
+  std::cout << "eigval1 " << eigvals[1] << "\n";
+  std::cout << "eigval2 " << eigvals[2] << "\n\n";
+
   computeTransforms();
   postScaleTransorms();
   computeSinCosTable(false);
@@ -337,6 +359,7 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
           normal.safe_normalize();
         }
 
+        auto pVecNorm = Vector(p).normal();
         constructor.addVertex(pVector, normal, color_);
       }
 
@@ -430,4 +453,13 @@ Transform TensorGlyphBuilder::getTrans()
 Transform TensorGlyphBuilder::getRotate()
 {
   return rotate_;
+}
+
+Transform TensorGlyphBuilder::getScale()
+{
+  Transform scale = Transform();
+  auto eigvals = getEigenValues();
+  for (int i = 0; i < eigvals.size(); ++i)
+    scale.set_mat_val(i, i, eigvals[i]);
+  return scale;
 }

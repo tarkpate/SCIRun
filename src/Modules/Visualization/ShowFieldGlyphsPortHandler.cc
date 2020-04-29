@@ -490,35 +490,84 @@ namespace SCIRun{
       // Returns color vector for tensor that are using rgb conversion
       Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(Geometry::Tensor& t)
       {
+        auto newT = Geometry::Tensor(t);
+        double epsilon = pow(2, -50);
         Geometry::Vector colorVector;
-        double eigval1, eigval2, eigval3;
-        t.get_eigenvalues(eigval1, eigval2, eigval3);
+        std::vector<double> eigvals(3);
+        t.get_eigenvalues(eigvals[0], eigvals[1], eigvals[2]);
+        for (int i = 0; i < 3; ++i)
+          eigvals[i] = std::abs(eigvals[i]);
+        std::vector<Geometry::Vector> eigvecs(3);
+        t.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
+        // auto cross = Geometry::Cross(eigvecs[0], eigvecs[1]);
+        // if (Geometry::Dot(cross, eigvecs[2]) < 1-epsilon)
+          // eigvecs[2] = cross;
 
-        if(eigval1 == eigval2 && eigval1 != eigval3){
-          Geometry::Vector eigvec3_norm = t.get_eigenvector3().normal();
-          Geometry::Vector xCross = Cross(eigvec3_norm, Geometry::Vector(1,0,0));
-          Geometry::Vector yCross = Cross(eigvec3_norm, Geometry::Vector(0,1,0));
-          Geometry::Vector zCross = Cross(eigvec3_norm, Geometry::Vector(0,0,1));
-          xCross.normalize();
-          yCross.normalize();
-          zCross.normalize();
+        newT.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2], eigvals[0], eigvals[1], eigvals[2]);
+        newT.reorderTensorValues();
+        newT.get_eigenvalues(eigvals[0], eigvals[1], eigvals[2]);
+        newT.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
 
-          double epsilon = pow(2, -52);
-          if(std::abs(Dot(xCross, yCross)) > (1-epsilon)){
-            colorVector = xCross;
+        std::cout << "e1 " << eigvals[0] << "\n";
+        std::cout << "e2 " << eigvals[1] << "\n";
+        std::cout << "e3 " << eigvals[2] << "\n";
+        std::cout << "v1 " << eigvecs[0] << "\n";
+        std::cout << "v2 " << eigvecs[1] << "\n";
+        std::cout << "v3 " << eigvecs[2] << "\n";
+
+        // if(eigval1 == eigval2 && eigval1 != eigval3){
+          // Geometry::Vector eigvec3_norm = eigvecs[2].normal();
+          // Geometry::Vector xCross = Cross(eigvec3_norm, Geometry::Vector(1,0,0));
+          // Geometry::Vector yCross = Cross(eigvec3_norm, Geometry::Vector(0,1,0));
+          // Geometry::Vector zCross = Cross(eigvec3_norm, Geometry::Vector(0,0,1));
+          // xCross.normalize();
+          // yCross.normalize();
+          // zCross.normalize();
+
+          // if(std::abs(Dot(xCross, yCross)) > (1-epsilon)){
+            // std::cout << "x cross\n";
+            // colorVector = xCross;
+          // }
+          // else if(std::abs(Dot(yCross, zCross)) > (1-epsilon)){
+            // std::cout << "y cross\n";
+            // colorVector = yCross;
+          // }
+          // else if(std::abs(Dot(xCross, zCross)) > (1-epsilon)){
+            // std::cout << "z cross\n";
+            // colorVector = zCross;
+          // }
+          // else{
+            // if (std::abs(eigval1 - eigval2) < epsilon)
+            // {
+              // if (std::abs(eigval2 - eigval3) < epsilon)
+              // {std::cout << "e123 eq\n";
+                // colorVector = (eigvecs[0] + eigvecs[1] + eigvecs[2]).normal();
+              // }
+              // else
+              // {std::cout << "e12 eq\n";
+                // colorVector = (eigvecs[0] + eigvecs[1]).normal();
+              // }
+            // }
+            // else
+              // colorVector = eigvecs[0];
+          // }
+        // } else{
+        if (std::abs(eigvals[0] - eigvals[1]) < epsilon)
+        {
+          if (std::abs(eigvals[1] - eigvals[2]) < epsilon)
+          {
+            std::cout << "e123 eq\n";
+            colorVector = (eigvecs[0] + eigvecs[1] + eigvecs[2]).normal();
           }
-          else if(std::abs(Dot(yCross, zCross)) > (1-epsilon)){
-            colorVector = yCross;
+          else
+          {std::cout << "e12 eq\n";
+            colorVector = (eigvecs[0] + eigvecs[1]).normal();
           }
-          else if(std::abs(Dot(xCross, zCross)) > (1-epsilon)){
-            colorVector = zCross;
-          }
-          else{
-            colorVector = t.get_eigenvector1();
-          }
-        } else{
-          colorVector = t.get_eigenvector1();
         }
+        else
+          colorVector = eigvecs[0];
+        // }
+        std::cout << "\n";
         colorVector = Abs(colorVector);
         colorVector.normalize();
         return colorVector;
