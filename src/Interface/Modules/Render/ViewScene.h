@@ -53,6 +53,7 @@ namespace SCIRun {
 
     class GLWidget;
     class ViewSceneControlsDock;
+    class ScopedWidgetColorChanger;
 
     class SCISHARE ViewSceneDialog : public ModuleDialogGeneric, public Ui::ViewScene
     {
@@ -236,6 +237,9 @@ namespace SCIRun {
       void addConfigurationDock();
       QColor checkColorSetting(std::string& rgb, QColor defaultColor);
       void pullCameraState();
+      void pushCameraDistance();
+      void pushCameraLookAt();
+      void pushCameraRotation();
       void pushCameraState();
 
       //---------------- Widgets -------------------------------------------------------------------
@@ -243,6 +247,7 @@ namespace SCIRun {
       void tryWidgetSelection(QMouseEvent* event);
       void selectObject(const int x, const int y);
       void restoreObjColor();
+      void backupColorValues(Graphics::Datatypes::WidgetHandle widget);
 
       //---------------- Clipping Planes -----------------------------------------------------------
       void updatClippingPlaneDisplay();
@@ -291,6 +296,7 @@ namespace SCIRun {
       QComboBox*                            mDownViewBox                  {nullptr};  ///< Combo box for Down axis options.
       QComboBox*                            mUpVectorBox                  {nullptr};  ///< Combo box for Up Vector options.
       ViewSceneControlsDock*                mConfigurationDock            {nullptr};  ///< Dock holding configuration functions
+      SharedPointer<ScopedWidgetColorChanger> widgetColorChanger_         {};
 
       bool                                  shown_                        {false};
       bool                                  delayGC                       {false};

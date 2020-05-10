@@ -35,7 +35,6 @@
 #include <Core/GeometryPrimitives/Transform.h>
 #include <Core/Logging/Log.h>
 #include <Graphics/Datatypes/GeometryImpl.h>
-#include <Core/GeometryPrimitives/Transform.h>
 #include <Core/Thread/Mutex.h>
 #include <Graphics/Glyphs/GlyphGeom.h>
 #include <Interface/Modules/Render/ES/RendererInterface.h>
@@ -44,8 +43,8 @@
 #include <Interface/Modules/Render/ViewScenePlatformCompatibility.h>
 #include <Interface/Modules/Render/ES/comp/StaticClippingPlanes.h>
 #include <Modules/Render/ViewScene.h>
+#include <Interface/Modules/Render/ViewSceneUtility.h>
 #include <QOpenGLContext>
-#include <glm/gtc/quaternion.hpp>
 
 using namespace SCIRun::Gui;
 using namespace SCIRun::Dataflow::Networks;
@@ -58,7 +57,63 @@ using namespace SCIRun::Core::Thread;
 using namespace SCIRun::Core::Algorithms::Render;
 using namespace SCIRun::Core::Algorithms;
 using namespace SCIRun::Render;
+using namespace SCIRun::Render::Gui;
 using namespace SCIRun::Modules::Render;
+
+namespace SCIRun {
+namespace Gui {
+  class SCISHARE ScopedWidgetColorChanger
+  {
+  public:
+    ScopedWidgetColorChanger(WidgetHandle widget)
+    : widget_(widget)
+    {
+      backupColorValues();
+    }
+
+    ~ScopedWidgetColorChanger()
+    {
+      colorWidget(previousAmbientColor_, previousDiffuseColor_, previousSpecularColor_);
+    }
+
+    void colorWidget(glm::vec4 ambient, glm::vec4 diffuse, glm::vec4 specular)
+    {
+      for (auto& pass : widget_->passes())
+      {
+        pass.addUniform("uAmbientColor", ambient);
+        pass.addUniform("uDiffuseColor", diffuse);
+        pass.addUniform("uSpecularColor", specular);
+      }
+    }
+
+    void colorWidgetRed()
+    {
+      colorWidget(glm::vec4{0.1f, 0.0f, 0.0f, 1.0f},
+                  glm::vec4{1.0f, 0.0f, 0.0f, 1.0f},
+                  glm::vec4{0.1f, 0.0f, 0.0f, 1.0f});
+    }
+
+  private:
+    WidgetHandle widget_;
+    glm::vec4                                         previousDiffuseColor_  {0.0};
+    glm::vec4                                         previousSpecularColor_ {0.0};
+    glm::vec4                                         previousAmbientColor_  {0.0};
+
+    void backupColorValues()
+    {
+      for (auto& pass : widget_->passes())
+        for (auto& uniform : pass.mUniforms)
+        {
+          if (uniform.name == "uAmbientColor")
+            previousAmbientColor_ = uniform.data;
+          else if (uniform.name == "uDiffuseColor")
+            previousDiffuseColor_ = uniform.data;
+          else if (uniform.name == "uSpecularColor")
+            previousSpecularColor_ = uniform.data;
+        }
+    }
+  };
+}}
 
 namespace
 {
@@ -493,17 +548,9 @@ void ViewSceneDialog::setupScaleBar()
 //--------------------------------------------------------------------------------------------------
 void ViewSceneDialog::pullCameraState()
 {
-  auto spire = mSpire.lock();
-  if(!spire) return;
-
-  float distance = state_->getValue(Modules::Render::ViewScene::CameraDistance).toDouble();
-  spire->setCameraDistance(distance);
-
-  auto lookAt = toDoubleVector(state_->getValue(Modules::Render::ViewScene::CameraLookAt).toVector());
-  spire->setCameraLookAt(glm::vec3(lookAt[0], lookAt[1], lookAt[2]));
-
-  auto rotation = toDoubleVector(state_->getValue(Modules::Render::ViewScene::CameraRotation).toVector());
-  spire->setCameraRotation(glm::quat(rotation[0], rotation[1], rotation[2], rotation[3]));
+  pullCameraDistance();
+  pullCameraLookAt();
+  pullCameraRotation();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -513,8 +560,11 @@ void ViewSceneDialog::pullCameraRotation()
   auto spire = mSpire.lock();
   if(!spire) return;
 
-  auto rotation = toDoubleVector(state_->getValue(Modules::Render::ViewScene::CameraRotation).toVector());
-  spire->setCameraRotation(glm::quat(rotation[0], rotation[1], rotation[2], rotation[3]));
+  std::string rotString = state_->getValue(Modules::Render::ViewScene::CameraRotation).toString();
+  glm::quat q = ViewSceneUtility::stringToQuat(rotString);
+  spire->setCameraRotation(q);
+
+  pushCameraRotation();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -524,8 +574,10 @@ void ViewSceneDialog::pullCameraLookAt()
   auto spire = mSpire.lock();
   if(!spire) return;
 
-  auto lookAt = toDoubleVector(state_->getValue(Modules::Render::ViewScene::CameraLookAt).toVector());
+  auto lookAt = pointFromString(state_->getValue(Modules::Render::ViewScene::CameraLookAt).toString());
   spire->setCameraLookAt(glm::vec3(lookAt[0], lookAt[1], lookAt[2]));
+
+  pushCameraLookAt();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -535,26 +587,55 @@ void ViewSceneDialog::pullCameraDistance()
   auto spire = mSpire.lock();
   if(!spire) return;
 
-  float distance = state_->getValue(Modules::Render::ViewScene::CameraDistance).toDouble();
+  double distance = state_->getValue(Modules::Render::ViewScene::CameraDistance).toDouble();
+  double distanceMin = state_->getValue(Modules::Render::ViewScene::CameraDistanceMinimum).toDouble();
+  distance = std::max(std::abs(distance), distanceMin);
   spire->setCameraDistance(distance);
+
+  pushCameraDistance();
 }
 
 //--------------------------------------------------------------------------------------------------
 void ViewSceneDialog::pushCameraState()
+{
+  pushCameraDistance();
+  pushCameraLookAt();
+  pushCameraRotation();
+}
+
+//--------------------------------------------------------------------------------------------------
+void ViewSceneDialog::pushCameraDistance()
 {
   pushingCameraState_ = true;
   auto spire = mSpire.lock();
   if(!spire) return;
 
   state_->setValue(Modules::Render::ViewScene::CameraDistance, (double)spire->getCameraDistance());
+  pushingCameraState_ = false;
+}
+
+//--------------------------------------------------------------------------------------------------
+void ViewSceneDialog::pushCameraLookAt()
+{
+  pushingCameraState_ = true;
+  auto spire = mSpire.lock();
+  if(!spire) return;
 
   auto v = spire->getCameraLookAt();
-  auto lookAt = makeAnonymousVariableList((double)v.x, (double)v.y, (double)v.z);
-  state_->setValue(Modules::Render::ViewScene::CameraLookAt, lookAt);
+  auto lookAt = Point((double)v.x, (double)v.y, (double)v.z);
+  state_->setValue(Modules::Render::ViewScene::CameraLookAt, lookAt.get_string());
+  pushingCameraState_ = false;
+}
+
+//--------------------------------------------------------------------------------------------------
+void ViewSceneDialog::pushCameraRotation()
+{
+  pushingCameraState_ = true;
+  auto spire = mSpire.lock();
+  if(!spire) return;
 
   auto q = spire->getCameraRotation();
-  auto rotation = makeAnonymousVariableList((double)q.w, (double)q.x, (double)q.y, (double)q.z);
-  state_->setValue(Modules::Render::ViewScene::CameraRotation, rotation);
+  state_->setValue(Modules::Render::ViewScene::CameraRotation, ViewSceneUtility::quatToString(q));
   pushingCameraState_ = false;
 }
 
@@ -956,6 +1037,7 @@ void ViewSceneDialog::mouseReleaseEvent(QMouseEvent* event)
   if (selectedWidget_)
   {
     restoreObjColor();
+    selectedWidget_->changeID();
     updateModifiedGeometries();
     unblockExecution();
     Q_EMIT mousePressSignalForGeometryObjectFeedback(event->x(), event->y(), selectedWidget_->uniqueID());
@@ -1288,35 +1370,6 @@ static std::vector<WidgetHandle> filterGeomObjectsForWidgets(SCIRun::Modules::Re
   return objList;
 }
 
-namespace
-{
-  void colorWidget(WidgetHandle widget, const glm::vec4& ambient, const glm::vec4& diffuse, const glm::vec4& specular)
-  {
-    for (auto& pass : widget->passes())
-    {
-      pass.addUniform("uAmbientColor", ambient);
-      pass.addUniform("uDiffuseColor", diffuse);
-      pass.addUniform("uSpecularColor", specular);
-    }
-  }
-
-  void colorWidgetRed(WidgetHandle widget)
-  {
-    colorWidget(widget,
-      glm::vec4{0.1f, 0.0f, 0.0f, 1.0f},
-      glm::vec4{1.0f, 0.0f, 0.0f, 1.0f},
-      glm::vec4{0.1f, 0.0f, 0.0f, 1.0f});
-  }
-
-  void restoreWidgetColor(WidgetHandle widget)
-  {
-    colorWidget(widget,
-      glm::vec4{0.1f, 0.1f, 0.1f, 1.0f},
-      glm::vec4{1.0f, 1.0f, 1.0f, 1.0f},
-      glm::vec4{0.1f, 1.0f, 1.0f, 1.0f});
-  }
-}
-
 //--------------------------------------------------------------------------------------------------
 void ViewSceneDialog::selectObject(const int x, const int y)
 {
@@ -1346,7 +1399,8 @@ void ViewSceneDialog::selectObject(const int x, const int y)
 
     if (selectedWidget_)
     {
-      colorWidgetRed(selectedWidget_);
+      widgetColorChanger_ = boost::make_shared<ScopedWidgetColorChanger>(selectedWidget_);
+      widgetColorChanger_->colorWidgetRed();
     }
   }
 }
@@ -1361,9 +1415,7 @@ void ViewSceneDialog::restoreObjColor()
   LOG_DEBUG("ViewSceneDialog::asyncExecute after locking");
 
   if (selectedWidget_)
-  {
-    restoreWidgetColor(selectedWidget_);
-  }
+    widgetColorChanger_.reset();
 }
 
 //--------------------------------------------------------------------------------------------------
