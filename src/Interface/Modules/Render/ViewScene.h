@@ -64,7 +64,7 @@ namespace SCIRun {
 
       std::string toString(std::string prefix) const;
       void adjustToolbar() override;
-
+      void autoSaveScreenshot();
 
     Q_SIGNALS:
       void newGeometryValueForwarder();
@@ -236,6 +236,9 @@ namespace SCIRun {
       void addConfigurationDock();
       QColor checkColorSetting(std::string& rgb, QColor defaultColor);
       void pullCameraState();
+      void pushCameraDistance();
+      void pushCameraLookAt();
+      void pushCameraRotation();
       void pushCameraState();
 
       //---------------- Widgets -------------------------------------------------------------------

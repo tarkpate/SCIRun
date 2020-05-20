@@ -41,6 +41,7 @@ SET(Interface_Modules_Render_FORMS
 
 SET(Interface_Modules_Render_HEADERS_TO_MOC
   ViewScene.h
+  ViewSceneUtility.h
   ViewSceneControlsDock.h
   ViewOspraySceneConfig.h
   GLWidget.h
@@ -78,6 +79,7 @@ SET(Interface_Modules_Render_HEADERS_NO_MOC
 
 SET(Interface_Modules_Render_SOURCES
   ViewScene.cc
+  ViewSceneUtility.cc
   ViewSceneControlsDock.cc
   GLWidget.cc
   GLContext.cc
@@ -136,9 +138,8 @@ SCIRUN_ADD_TEST_DIR(Tests)
 
 IF(WITH_OSPRAY)
   ADD_SUBDIRECTORY(Ospray)
-  #INCLUDE(${CMAKE_SOURCE_DIR}/CMake/Modules/FindOSPRay.cmake)
-  INCLUDE_DIRECTORIES(${OSPRAY_INCLUDE_DIRS})
   TARGET_LINK_LIBRARIES(Interface_Modules_Render
     Interface_Modules_Render_Ospray
+    ospray::ospray
   )
 ENDIF()
