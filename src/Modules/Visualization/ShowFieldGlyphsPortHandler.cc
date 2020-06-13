@@ -508,13 +508,6 @@ namespace SCIRun{
         newT.get_eigenvalues(eigvals[0], eigvals[1], eigvals[2]);
         newT.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
 
-        std::cout << "e1 " << eigvals[0] << "\n";
-        std::cout << "e2 " << eigvals[1] << "\n";
-        std::cout << "e3 " << eigvals[2] << "\n";
-        std::cout << "v1 " << eigvecs[0] << "\n";
-        std::cout << "v2 " << eigvecs[1] << "\n";
-        std::cout << "v3 " << eigvecs[2] << "\n";
-
         // if(eigval1 == eigval2 && eigval1 != eigval3){
           // Geometry::Vector eigvec3_norm = eigvecs[2].normal();
           // Geometry::Vector xCross = Cross(eigvec3_norm, Geometry::Vector(1,0,0));
@@ -556,18 +549,16 @@ namespace SCIRun{
         {
           if (std::abs(eigvals[1] - eigvals[2]) < epsilon)
           {
-            std::cout << "e123 eq\n";
             colorVector = (eigvecs[0] + eigvecs[1] + eigvecs[2]).normal();
           }
           else
-          {std::cout << "e12 eq\n";
+          {
             colorVector = (eigvecs[0] + eigvecs[1]).normal();
           }
         }
         else
           colorVector = eigvecs[0];
         // }
-        std::cout << "\n";
         colorVector = Abs(colorVector);
         colorVector.normalize();
         return colorVector;

@@ -300,12 +300,6 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   makeTensorPositive(true);
   auto eigvals = getEigenValues();
   auto eigvecs = getEigenVectors();
-  std::cout << "eigvec0 " << eigvecs[0] << "\n";
-  std::cout << "eigvec1 " << eigvecs[1] << "\n";
-  std::cout << "eigvec2 " << eigvecs[2] << "\n";
-  std::cout << "eigval0 " << eigvals[0] << "\n";
-  std::cout << "eigval1 " << eigvals[1] << "\n";
-  std::cout << "eigval2 " << eigvals[2] << "\n\n";
 
   computeTransforms();
   postScaleTransorms();

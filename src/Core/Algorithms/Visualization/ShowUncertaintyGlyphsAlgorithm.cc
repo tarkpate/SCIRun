@@ -199,7 +199,6 @@ double ShowUncertaintyGlyphsImpl::diffT(const TensorGlyphBuilder& builder, const
     TensorGlyphBuilder newBuilder = builder;
     Tensor newT = symmetricTensorFromMandel(tMandel);
     newBuilder.setTensor(newT);
-    // std::cout << "t " << symmetricTensorFromMandel(t) << "\n";
     newBuilder.makeTensorPositive(true, false);
     newBuilder.computeTransforms();
     newBuilder.postScaleTransorms();
@@ -209,22 +208,18 @@ double ShowUncertaintyGlyphsImpl::diffT(const TensorGlyphBuilder& builder, const
     double B = newBuilder.getB();
     std::vector<Vector> eigvecs(3);
     newBuilder.getTensor().get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
-    const Transform rotate = Transform(Point(0,0,0), eigvecs[0], eigvecs[1], eigvecs[2]);//newBuilder.getRotate();
+    const Transform rotate = Transform(Point(0,0,0), eigvecs[0], eigvecs[1], eigvecs[2]);
     const Transform scale = newBuilder.getScale();
     auto rotateInv = rotate;
     rotateInv.invert();
     auto scaleInv = scale;
     scaleInv.invert();
-    // std::cout << "scale " << scale << "\n";
-    // std::cout << "scaleInv " << scaleInv << "\n";
 
     Tensor t = newBuilder.getTensor();
     Vector pseudoInv = Vector();
     t.get_eigenvalues(pseudoInv[0], pseudoInv[1], pseudoInv[2]);
     for (int i = 0; i < 3; ++i)
       pseudoInv[i] = 1/pseudoInv[i];
-    // pseudoInv /= t.magnitude();
-    // std::cout << "pesudoInv " << pseudoInv << "\n";
 
     Vector newP = (pseudoInv * Vector(rotateInv * p));
     dist[i] = evaluateSuperquadricImpl(linear, Point(newP), A, B);
@@ -254,24 +249,16 @@ void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
     Vector cross = Cross(eigvecs[0], eigvecs[1]);
     bool flipVertices = Dot(cross, eigvecs[2]) < 2e-12;
 
-    // std::cout << "t " << builder.getTensor() << "\n";
     // Vector e1, e2, e3;
     // builder.getTensor().get_eigenvectors(e1, e2, e3);
-    // std::cout << "e1 " << e1 << "\n";
-    // std::cout << "e2 " << e2 << "\n";
-    // std::cout << "e3 " << e3 << "\n";
-    // std::cout << "tMandel\n " << builder.getTensor().mandel() << "\n";
     DenseColumnMatrix tMandel = builder.getTensor().mandel();
 
     const Transform trans = builder.getTrans();
-    // const Transform rotate = builder.getRotate();
     const Transform rotate = Transform(Point(0,0,0), eigvecs[0], eigvecs[1], eigvecs[2]);
     const Transform scale = builder.getScale();
     const Transform scaleThenRotate = rotate * scale;
     Transform rotateInv = rotate;
     rotateInv.invert();
-    std::cout << "rotate " << rotate << "\n";
-    // std::cout << "rotateInv " << rotateInv << "\n";
 
     SuperquadricPointParams params;
     params.A = builder.getA();
@@ -353,8 +340,9 @@ void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
           normal.safe_normalize();
 
           Vector offsetP = p + q * normal;
+          auto center = Vector(points_[0][f]);
 
-          constructor_.addVertex(offsetP, nVector, ColorRGB(1.0, 1.0, 1.0));
+          constructor_.addVertex(offsetP + center, nVector, ColorRGB(1.0, 1.0, 1.0));
         }
 
         if (flipVertices)
