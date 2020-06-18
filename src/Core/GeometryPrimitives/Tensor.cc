@@ -50,7 +50,6 @@
 
 using namespace SCIRun;
 using namespace Core::Geometry;
-using namespace Core::Datatypes;
 
 Tensor::Tensor() : l1_(0), l2_(0), l3_(0), have_eigens_(false)
 {
@@ -355,7 +354,7 @@ void Tensor::build_eigens_from_mat()
   if (have_eigens_) return;
   Eigen::Matrix3d dm;
   for (int i = 0; i < 3; ++i)
-    dm.row(i) = Eigen::Vector3d::Map(&mat_[i][0], DIM_);
+    dm.row(i) = Eigen::Vector3d::Map(&mat_[i][0], 3);
 
   auto es = Eigen::EigenSolver<Eigen::Matrix3d>(dm);
   auto vecs = es.eigenvectors();
@@ -461,15 +460,15 @@ Eigen::MatrixXd Tensor::mandel()
   // eigvec1.normalize();
   // eigvec2.normalize();
   // eigvec3.normalize();
-  for(int i = 0; i < 3; ++i)
-    // mandel.put(i, eigvecs[i][i]);
-    mandel.put(i, mat_[i][i]);
+  for (int i = 0; i < 3; ++i)
+    mandel(i, 0) = mat_[i][i];
+  // mandel.put(i, eigvecs[i][i]);
   // mandel.put(3, eigvecs[0][1] * sqrt2);
   // mandel.put(4, eigvecs[0][2] * sqrt2);
   // mandel.put(5, eigvecs[1][2] * sqrt2);
-  mandel.put(3, mat_[0][1] * sqrt2);
-  mandel.put(4, mat_[0][2] * sqrt2);
-  mandel.put(5, mat_[1][2] * sqrt2);
+  mandel(3, 0) = mat_[0][1] * sqrt2;
+  mandel(4, 0) = mat_[0][2] * sqrt2;
+  mandel(5, 0) = mat_[1][2] * sqrt2;
 
   return mandel;
 }
