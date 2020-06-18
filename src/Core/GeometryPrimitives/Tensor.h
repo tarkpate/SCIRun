@@ -45,7 +45,7 @@
 #include <Core/Containers/Array1.h>
 #include <Core/GeometryPrimitives/Vector.h>
 #include <Core/GeometryPrimitives/share.h>
-#include <Core/Datatypes/DenseColumnMatrix.h>
+#include <Eigen/Dense>
 
 #include <iosfwd>
 #include <vector>
@@ -97,7 +97,7 @@ public:
   const Vector get_eigenvector2();
   const Vector get_eigenvector3();
   void get_eigenvalues(double &l1, double &l2, double &l3);
-  Core::Datatypes::DenseColumnMatrix mandel();
+  Eigen::MatrixXd mandel();
 
   double norm() const;
   Vector normalized_eigvals() const;

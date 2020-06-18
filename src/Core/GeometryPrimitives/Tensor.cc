@@ -38,11 +38,9 @@
 ///
 
 
-#include "Core/Datatypes/MatrixFwd.h"
 #include <Core/GeometryPrimitives/Tensor.h>
 #include <Core/Utils/Legacy/TypeDescription.h>
 #include <Core/Utils/Legacy/Assert.h>
-#include <Core/Datatypes/DenseMatrix.h>
 
 #include <iostream>
 
@@ -355,10 +353,9 @@ Tensor Tensor::operator/(const double s) const
 void Tensor::build_eigens_from_mat()
 {
   if (have_eigens_) return;
-  DenseMatrix dm = DenseMatrix(3, 3);
+  Eigen::Matrix3d dm;
   for (int i = 0; i < 3; ++i)
-    for (int j = 0; j < 3; ++j)
-      dm(i,j) = mat_[i][j];
+    dm.row(i) = Eigen::Vector3d::Map(&mat_[i][0], DIM_);
 
   auto es = Eigen::EigenSolver<Eigen::Matrix3d>(dm);
   auto vecs = es.eigenvectors();
@@ -449,7 +446,7 @@ void Tensor::set_outside_eigens(const Vector &e1, const Vector &e2,
   build_mat_from_eigens();
 }
 
-DenseColumnMatrix Tensor::mandel()
+Eigen::MatrixXd Tensor::mandel()
 {
   if (!have_eigens_) build_eigens_from_mat();
   std::vector<Vector> eigvecs(3);
@@ -460,7 +457,7 @@ DenseColumnMatrix Tensor::mandel()
   for (int i = 0; i < 3; ++i)
     eigvecs[i] *= eigvals[i];
 
-  auto mandel = DenseColumnMatrix(6);
+  Eigen::MatrixXd mandel(6, 1);
   // eigvec1.normalize();
   // eigvec2.normalize();
   // eigvec3.normalize();
