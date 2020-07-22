@@ -61,7 +61,7 @@ namespace impl
     {
       sparse = sparse.transpose();
     }
-    virtual void visit(DenseColumnMatrixGeneric<double>& column) override
+    virtual void visit(DenseColumnMatrix& column) override
     {
       column = column.transpose();
     }

@@ -127,7 +127,7 @@ namespace
       auto c = std::get<COLUMN>(mats);
       if (c)
       {
-        MoveToHeap<DenseColumnMatrixGeneric<T2>> m;
+        MoveToHeap<DenseColumnMatrixGeneric<T2, Eigen::Dynamic>> m;
         return m(f(*c));
       }
       return nullptr;

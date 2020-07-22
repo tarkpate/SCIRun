@@ -63,7 +63,7 @@ namespace Core {
       }
 
       explicit Dyadic3DTensorGeneric(
-          const std::initializer_list<DenseColumnMatrixGeneric<Number>>& eigvecs)
+          const std::initializer_list<DenseColumnMatrixGeneric<Number, 3>>& eigvecs)
           : parent()
       {
         if (eigvecs.size() != DIM_)
@@ -71,9 +71,18 @@ namespace Core {
         parent::setEigenVectors(eigvecs);
       }
 
-      Dyadic3DTensorGeneric(const DenseColumnMatrixGeneric<Number>& eigvec0,
-          const DenseColumnMatrixGeneric<Number>& eigvec1,
-          const DenseColumnMatrixGeneric<Number>& eigvec2)
+      explicit Dyadic3DTensorGeneric(
+          const std::vector<DenseColumnMatrixGeneric<Number, 3>>& eigvecs)
+          : parent()
+      {
+        if (eigvecs.size() != DIM_)
+          THROW_INVALID_ARGUMENT("The number of input parameters must be " + DIM_);
+        parent::setEigenVectors(eigvecs);
+      }
+
+      Dyadic3DTensorGeneric(const DenseColumnMatrixGeneric<Number, 3>& eigvec0,
+          const DenseColumnMatrixGeneric<Number, 3>& eigvec1,
+          const DenseColumnMatrixGeneric<Number, 3>& eigvec2)
           : parent()
       {
         parent::setEigenVectors({eigvec0, eigvec1, eigvec2});
@@ -109,7 +118,7 @@ namespace Core {
         return 3.0 * eigvals[2] / parent::eigenValueSum();
       }
 
-      DenseColumnMatrixGeneric<Number> mandel()
+      DenseColumnMatrixGeneric<Number, 3> mandel()
       {
         auto eigvals = parent::getEigenvalues();
         auto eigvecs = parent::getEigenvectors();
@@ -118,7 +127,7 @@ namespace Core {
           eigvecs[i] *= eigvals[i];
 
         static const double sqrt2 = std::sqrt(2);
-        DenseColumnMatrixGeneric<Number> mandel({eigvecs[0][0], eigvecs[1][1], eigvecs[2][2],
+        DenseColumnMatrixGeneric<Number, 3> mandel({eigvecs[0][0], eigvecs[1][1], eigvecs[2][2],
             eigvecs[0][1] * sqrt2, eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2});
         return mandel;
       }
@@ -126,13 +135,13 @@ namespace Core {
      private:
       const size_t DIM_ = 3;
 
-      std::vector<DenseColumnMatrixGeneric<Number>> convertNativeVectorsToEigen(
+      std::vector<DenseColumnMatrixGeneric<Number, 3>> convertNativeVectorsToEigen(
           const std::vector<Core::Geometry::Vector>& vecs)
       {
-        std::vector<DenseColumnMatrixGeneric<Number>> outVecs(vecs.size());
+        std::vector<DenseColumnMatrixGeneric<Number, 3>> outVecs(vecs.size());
         for (size_t i = 0; i < vecs.size(); ++i)
         {
-          outVecs[i] = DenseColumnMatrixGeneric<Number>(DIM_);
+          outVecs[i] = DenseColumnMatrixGeneric<Number, 3>(DIM_);
           for (size_t j = 0; j < DIM_; ++j)
             outVecs[i][j] = vecs[i][j];
         }

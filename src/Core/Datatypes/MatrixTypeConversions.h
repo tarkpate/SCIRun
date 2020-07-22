@@ -68,9 +68,9 @@ namespace Core {
       }
 
       template <typename T, template <typename> class MatrixType>
-      static SharedPointer<DenseColumnMatrixGeneric<T>> toColumn(const SharedPointer<MatrixType<T>>& mh)
+      static SharedPointer<DenseColumnMatrixGeneric<T, Eigen::Dynamic>> toColumn(const SharedPointer<MatrixType<T>>& mh)
       {
-        return to<DenseColumnMatrixGeneric<T>>(mh);
+        return to<DenseColumnMatrixGeneric<T, Eigen::Dynamic>>(mh);
       }
 
       castMatrix() = delete;
@@ -127,7 +127,7 @@ namespace Core {
   {
   public:
     template <typename T, template <typename> class MatrixType>
-    static SharedPointer<DenseColumnMatrixGeneric<typename MatrixType<T>::value_type>> toColumn(const SharedPointer<MatrixType<T>>& mh)
+    static SharedPointer<DenseColumnMatrixGeneric<typename MatrixType<T>::value_type, Eigen::Dynamic>> toColumn(const SharedPointer<MatrixType<T>>& mh)
     {
       auto col = castMatrix::toColumn(mh);
       if (col)
@@ -135,22 +135,28 @@ namespace Core {
 
       auto dense = castMatrix::toDense(mh);
       if (dense)
-        return boost::make_shared<DenseColumnMatrixGeneric<T>>(dense->col(0));
+        return boost::make_shared<DenseColumnMatrixGeneric<T, Eigen::Dynamic>>(dense->col(0));
 
       auto sparse = castMatrix::toSparse(mh);
       if (sparse)
       {
-        DenseColumnMatrixGeneric<T> dense_col(DenseColumnMatrixGeneric<T>::Zero(sparse->nrows()));
+        DenseColumnMatrixGeneric<T, Eigen::Dynamic> dense_col(DenseColumnMatrixGeneric<T, Eigen::Dynamic>::Zero(sparse->nrows()));
         for (auto i = 0; i < sparse->nrows(); i++)
           dense_col(i) = sparse->coeff(i, 0);
 
-        return boost::make_shared<DenseColumnMatrixGeneric<T>>(dense_col);
+        return boost::make_shared<DenseColumnMatrixGeneric<T, Eigen::Dynamic>>(dense_col);
       }
 
       return nullptr;
     }
     static DenseMatrixHandle toDense(const MatrixHandle& mh);
     static SparseRowMatrixHandle toSparse(const MatrixHandle& mh);
+
+    template <typename T, template <typename, int Row> class MatrixType>
+    static SharedPointer<SparseRowMatrixGeneric<T>> fromDenseToSparse(const MatrixType<T, Eigen::Dynamic>& dense)
+    {
+      return fromDenseToSparse(dense);
+    }
 
     template <typename T, template <typename> class MatrixType>
     static SharedPointer<SparseRowMatrixGeneric<T>> fromDenseToSparse(const MatrixType<T>& dense)
@@ -175,7 +181,7 @@ namespace Core {
   }
 
   template <class T>
-  using MatrixTuple = std::tuple<DenseMatrixHandleGeneric<T>, SparseRowMatrixHandleGeneric<T>, DenseColumnMatrixHandleGeneric<T>>;
+  using MatrixTuple = std::tuple<DenseMatrixHandleGeneric<T>, SparseRowMatrixHandleGeneric<T>, DenseColumnMatrixHandleGeneric<T, Eigen::Dynamic>>;
 
   template <class T>
   MatrixTuple<T> explodeBySubtype(MatrixHandleGeneric<T> m)

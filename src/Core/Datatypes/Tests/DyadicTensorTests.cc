@@ -42,12 +42,12 @@ const std::vector<Vector> nativeEigvecs = {
     Vector(1.6, 0.9, 4.3), Vector(4.0, 6.4, 7), Vector(6, 34, 1)};
 const std::string eigvecsString = "[1.6 0.9 4.3 4 6.4 7 6 34 1]";
 
-std::vector<DenseColumnMatrix> getEigenEigvecs()
+std::vector<DenseColumnMatrixGeneric<double, 3>> getEigenEigvecs()
 {
-  std::vector<DenseColumnMatrix> eigvecs(3);
+  std::vector<DenseColumnMatrixGeneric<double, 3>> eigvecs(3);
   for (int i = 0; i < 3; ++i)
   {
-    eigvecs[i] = DenseColumnMatrix(3);
+    eigvecs[i] = DenseColumnMatrixGeneric<double, 3>();
     for (int j = 0; j < 3; ++j)
       eigvecs[i][j] = nativeEigvecs[i][j];
   }
@@ -89,7 +89,8 @@ TEST(Dyadic3DTensorTest, ConstructTensorWithDoubles)
 
 TEST(Dyadic3DTensorTest, CanConstructWithColumnMatrixOfSixValues)
 {
-  Dyadic3DTensor t = symmetricTensorFromSixElementArray(DenseColumnMatrix({1, 2, 3, 4, 5, 6}));
+  Dyadic3DTensor t =
+      symmetricTensorFromSixElementArray(DenseColumnMatrixGeneric<double, 6>({1, 2, 3, 4, 5, 6}));
   std::stringstream ss;
   ss << t;
   ASSERT_EQ("[1 2 3 2 4 5 3 5 6]", ss.str());
@@ -97,7 +98,8 @@ TEST(Dyadic3DTensorTest, CanConstructWithColumnMatrixOfSixValues)
 
 TEST(Dyadic3DTensorTest, CannotConstructWithColumnMatrixOfFiveValues)
 {
-  ASSERT_ANY_THROW(symmetricTensorFromSixElementArray(DenseColumnMatrix({1, 2, 3, 4, 5})));
+  ASSERT_ANY_THROW(
+      symmetricTensorFromSixElementArray(DenseColumnMatrixGeneric<double, 5>({1, 2, 3, 4, 5})));
 }
 
 TEST(Dyadic3DTensorTest, CanConstructWithVectorOfSixValues)
@@ -142,29 +144,33 @@ TEST(Dyadic3DTensorTest, CannotConstructTensorWithMoreThanThreeEigenEigenvectors
 
 TEST(Dyadic3DTensorTest, LinearCertainty)
 {
-  Dyadic3DTensor t(
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 5, 0}), DenseColumnMatrix({0, 0, 2}));
+  Dyadic3DTensor t(DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 5, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 2}));
   ASSERT_EQ(3.0 / 8.0, t.linearCertainty());
 }
 
 TEST(Dyadic3DTensorTest, PlanarCertainty)
 {
-  Dyadic3DTensor t(
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 5, 0}), DenseColumnMatrix({0, 0, 2}));
+  Dyadic3DTensor t(DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 5, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 2}));
   ASSERT_EQ(1.0 / 4.0, t.planarCertainty());
 }
 
 TEST(Dyadic3DTensorTest, SphericalCertainty)
 {
-  Dyadic3DTensor t(
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 5, 0}), DenseColumnMatrix({0, 0, 2}));
+  Dyadic3DTensor t(DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 5, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 2}));
   ASSERT_EQ(3.0 / 8.0, t.sphericalCertainty());
 }
 
 TEST(Dyadic3DTensorTest, CertaintySum)
 {
-  Dyadic3DTensor t(
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 5, 0}), DenseColumnMatrix({0, 0, 2}));
+  Dyadic3DTensor t(DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 5, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 2}));
   ASSERT_EQ(1.0, t.linearCertainty() + t.planarCertainty() + t.sphericalCertainty());
 }
 
@@ -186,13 +192,14 @@ TEST(DyadicTensorTest, CanConstructWithMatrix)
 
 TEST(DyadicTensorTest, ConstructTensorWithEigenVectors)
 {
-  std::vector<DenseColumnMatrix> nativeEigvecs = {
-      DenseColumnMatrix(4), DenseColumnMatrix(4), DenseColumnMatrix(4), DenseColumnMatrix(4)};
+  std::vector<DenseColumnMatrixGeneric<double, 4>> eigvecs = {DenseColumnMatrixGeneric<double, 4>(),
+      DenseColumnMatrixGeneric<double, 4>(), DenseColumnMatrixGeneric<double, 4>(),
+      DenseColumnMatrixGeneric<double, 4>()};
   int n = 0;
   for (int i = 0; i < 4; ++i)
     for (int j = 0; j < 4; ++j)
-      nativeEigvecs[i][j] = ++n;
-  Dyadic4DTensor t(nativeEigvecs);
+      eigvecs[i][j] = ++n;
+  Dyadic4DTensor t(eigvecs);
   std::stringstream ss;
   ss << t;
 
@@ -201,8 +208,10 @@ TEST(DyadicTensorTest, ConstructTensorWithEigenVectors)
 
 TEST(DyadicTensorTest, StringConversion)
 {
-  std::vector<DenseColumnMatrix> vecs = {
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 2, 0}), DenseColumnMatrix({0, 0, 3})};
+  std::vector<DenseColumnMatrixGeneric<double, 3>> vecs = {
+      DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 2, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 3})};
   Dyadic3DTensor t(nativeEigvecs[0], nativeEigvecs[1], nativeEigvecs[2]);
   DyadicTensorGeneric<double, 3> t2(vecs);
 
@@ -224,8 +233,10 @@ TEST(DyadicTensorTest, GetEigenvalues)
 
 TEST(DyadicTensorTest, GetEigenvectors)
 {
-  std::vector<DenseColumnMatrix> vecs = {
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 2, 0}), DenseColumnMatrix({0, 0, 3})};
+  std::vector<DenseColumnMatrixGeneric<double, 3>> vecs = {
+      DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 2, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 3})};
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
       vecs[i][j] = (i == j) ? i + 1 : 0;
@@ -233,28 +244,37 @@ TEST(DyadicTensorTest, GetEigenvectors)
   Dyadic3DTensor t(vecs);
   auto eigvecs = t.getEigenvectors();
 
-  ASSERT_EQ(DenseColumnMatrix({0, 0, 1}), eigvecs[0]);
-  ASSERT_EQ(DenseColumnMatrix({0, 1, 0}), eigvecs[1]);
-  ASSERT_EQ(DenseColumnMatrix({1, 0, 0}), eigvecs[2]);
+  std::vector<DenseColumnMatrixGeneric<double, 3>> expected = {
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 1}),
+      DenseColumnMatrixGeneric<double, 3>({0, 1, 0}),
+      DenseColumnMatrixGeneric<double, 3>({1, 0, 0})};
+
+  for (int i = 0; i < 3; ++i)
+    ASSERT_EQ(expected[i], eigvecs[i]);
 }
 
 TEST(DyadicTensorTest, GetEigenvector)
 {
-  std::vector<DenseColumnMatrix> vecs = {
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 2, 0}), DenseColumnMatrix({0, 0, 3})};
+  std::vector<DenseColumnMatrixGeneric<double, 3>> vecs = {
+      DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 2, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 3})};
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
       vecs[i][j] = (i == j) ? i + 1 : 0;
 
   Dyadic3DTensor t(vecs);
 
-  ASSERT_EQ(DenseColumnMatrix({0, 1, 0}), t.getEigenvector(1));
+  auto expected = DenseColumnMatrixGeneric<double, 3>({0, 1, 0});
+  ASSERT_EQ(expected, t.getEigenvector(1));
 }
 
 TEST(DyadicTensorTest, Equivalent)
 {
-  std::vector<DenseColumnMatrix> vecs = {
-      DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 2, 0}), DenseColumnMatrix({0, 0, 3})};
+  std::vector<DenseColumnMatrixGeneric<double, 3>> vecs = {
+      DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 2, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 3})};
   Dyadic3DTensor t(nativeEigvecs[0], nativeEigvecs[1], nativeEigvecs[2]);
   DyadicTensorGeneric<double, 3> t2(vecs);
   auto t3 = DyadicTensorGeneric<double, 3>();
@@ -270,18 +290,22 @@ TEST(DyadicTensorTest, Equivalent)
 
 TEST(DyadicTensorTest, DifferentDimensionsNotEquivalent)
 {
-  Dyadic3DTensor t(
-      {DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 1, 0}), DenseColumnMatrix({0, 0, 1})});
-  Dyadic4DTensor t2({DenseColumnMatrix({1, 0, 0, 0}), DenseColumnMatrix({0, 1, 0, 0}),
-      DenseColumnMatrix({0, 0, 1, 0}), DenseColumnMatrix({0, 0, 0, 1})});
+  Dyadic3DTensor t({DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 1, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 1})});
+  Dyadic4DTensor t2({DenseColumnMatrixGeneric<double, 4>({1, 0, 0, 0}),
+      DenseColumnMatrixGeneric<double, 4>({0, 1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 4>({0, 0, 1, 0}),
+      DenseColumnMatrixGeneric<double, 4>({0, 0, 0, 1})});
 
   ASSERT_DEATH(t != t2, "");
 }
 
 TEST(DyadicTensorTest, EqualsOperatorTensor)
 {
-  Dyadic3DTensor t(
-      {DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 1, 0}), DenseColumnMatrix({0, 0, 1})});
+  Dyadic3DTensor t({DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 1, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 1})});
   Dyadic3DTensor t2 = t;
 
   ASSERT_TRUE(t == t2);
@@ -293,10 +317,12 @@ TEST(DyadicTensorTest, EqualsOperatorTensor)
 
 TEST(DyadicTensorTest, EqualsOperatorDouble)
 {
-  Dyadic3DTensor t(
-      {DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 1, 0}), DenseColumnMatrix({0, 0, 1})});
-  Dyadic3DTensor t2(
-      {DenseColumnMatrix({5, 5, 5}), DenseColumnMatrix({5, 5, 5}), DenseColumnMatrix({5, 5, 5})});
+  Dyadic3DTensor t({DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 1, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0, 1})});
+  Dyadic3DTensor t2({DenseColumnMatrixGeneric<double, 3>({5, 5, 5}),
+      DenseColumnMatrixGeneric<double, 3>({5, 5, 5}),
+      DenseColumnMatrixGeneric<double, 3>({5, 5, 5})});
 
   t = 5;
 
@@ -305,9 +331,12 @@ TEST(DyadicTensorTest, EqualsOperatorDouble)
 
 TEST(DyadicTensorTest, PlusEqualsTensorOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor t2({DenseColumnMatrix({6, 3}), DenseColumnMatrix({4, 6})});
-  Dyadic2DTensor expected({DenseColumnMatrix({8, 11}), DenseColumnMatrix({9, 9})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor t2(
+      {DenseColumnMatrixGeneric<double, 2>({6, 3}), DenseColumnMatrixGeneric<double, 2>({4, 6})});
+  Dyadic2DTensor expected(
+      {DenseColumnMatrixGeneric<double, 2>({8, 11}), DenseColumnMatrixGeneric<double, 2>({9, 9})});
 
   Dyadic2DTensor result = t;
   result += t2;
@@ -318,9 +347,12 @@ TEST(DyadicTensorTest, PlusEqualsTensorOperator)
 // Coefficient wise multiplication
 TEST(DyadicTensorTest, MultiplyTensorOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor t2({DenseColumnMatrix({6, 3}), DenseColumnMatrix({4, 6})});
-  Dyadic2DTensor expected({DenseColumnMatrix({12, 24}), DenseColumnMatrix({20, 18})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor t2(
+      {DenseColumnMatrixGeneric<double, 2>({6, 3}), DenseColumnMatrixGeneric<double, 2>({4, 6})});
+  Dyadic2DTensor expected({DenseColumnMatrixGeneric<double, 2>({12, 24}),
+      DenseColumnMatrixGeneric<double, 2>({20, 18})});
 
   Dyadic2DTensor result = t * t2;
 
@@ -330,8 +362,10 @@ TEST(DyadicTensorTest, MultiplyTensorOperator)
 // Coefficient wise multiplication
 TEST(DyadicTensorTest, MultiplyDoubleOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor expected({DenseColumnMatrix({6, 24}), DenseColumnMatrix({15, 9})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor expected(
+      {DenseColumnMatrixGeneric<double, 2>({6, 24}), DenseColumnMatrixGeneric<double, 2>({15, 9})});
 
   Dyadic2DTensor result = t * 3.0;
 
@@ -341,8 +375,10 @@ TEST(DyadicTensorTest, MultiplyDoubleOperator)
 // Coefficient wise multiplication
 TEST(DyadicTensorTest, MultiplyDoubleReverseOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor expected({DenseColumnMatrix({6, 24}), DenseColumnMatrix({15, 9})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor expected(
+      {DenseColumnMatrixGeneric<double, 2>({6, 24}), DenseColumnMatrixGeneric<double, 2>({15, 9})});
 
   Dyadic2DTensor result = 3.0 * t;
 
@@ -352,9 +388,12 @@ TEST(DyadicTensorTest, MultiplyDoubleReverseOperator)
 // Coefficient wise multiplication
 TEST(DyadicTensorTest, MultiplyEqualsTensorOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor t2({DenseColumnMatrix({6, 3}), DenseColumnMatrix({4, 6})});
-  Dyadic2DTensor expected({DenseColumnMatrix({12, 24}), DenseColumnMatrix({20, 18})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor t2(
+      {DenseColumnMatrixGeneric<double, 2>({6, 3}), DenseColumnMatrixGeneric<double, 2>({4, 6})});
+  Dyadic2DTensor expected({DenseColumnMatrixGeneric<double, 2>({12, 24}),
+      DenseColumnMatrixGeneric<double, 2>({20, 18})});
 
   Dyadic2DTensor result = t;
   result *= t2;
@@ -365,9 +404,12 @@ TEST(DyadicTensorTest, MultiplyEqualsTensorOperator)
 // Analog Equivalent of matrix multiplication
 TEST(DyadicTensorTest, Contraction)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor t2({DenseColumnMatrix({6, 3}), DenseColumnMatrix({4, 6})});
-  Dyadic2DTensor expected({DenseColumnMatrix({27, 57}), DenseColumnMatrix({38, 50})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor t2(
+      {DenseColumnMatrixGeneric<double, 2>({6, 3}), DenseColumnMatrixGeneric<double, 2>({4, 6})});
+  Dyadic2DTensor expected({DenseColumnMatrixGeneric<double, 2>({27, 57}),
+      DenseColumnMatrixGeneric<double, 2>({38, 50})});
 
   Dyadic2DTensor result = t.contract(t2);
 
@@ -376,9 +418,12 @@ TEST(DyadicTensorTest, Contraction)
 
 TEST(DyadicTensorTest, MinusOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor t2({DenseColumnMatrix({6, 3}), DenseColumnMatrix({4, 6})});
-  Dyadic2DTensor expected({DenseColumnMatrix({-4, 5}), DenseColumnMatrix({1, -3})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor t2(
+      {DenseColumnMatrixGeneric<double, 2>({6, 3}), DenseColumnMatrixGeneric<double, 2>({4, 6})});
+  Dyadic2DTensor expected(
+      {DenseColumnMatrixGeneric<double, 2>({-4, 5}), DenseColumnMatrixGeneric<double, 2>({1, -3})});
 
   Dyadic2DTensor result = t - t2;
 
@@ -387,9 +432,12 @@ TEST(DyadicTensorTest, MinusOperator)
 
 TEST(DyadicTensorTest, MinusEqualsOperator)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({2, 8}), DenseColumnMatrix({5, 3})});
-  Dyadic2DTensor t2({DenseColumnMatrix({6, 3}), DenseColumnMatrix({4, 6})});
-  Dyadic2DTensor expected({DenseColumnMatrix({-4, 5}), DenseColumnMatrix({1, -3})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({2, 8}), DenseColumnMatrixGeneric<double, 2>({5, 3})});
+  Dyadic2DTensor t2(
+      {DenseColumnMatrixGeneric<double, 2>({6, 3}), DenseColumnMatrixGeneric<double, 2>({4, 6})});
+  Dyadic2DTensor expected(
+      {DenseColumnMatrixGeneric<double, 2>({-4, 5}), DenseColumnMatrixGeneric<double, 2>({1, -3})});
 
   Dyadic2DTensor result = t;
   result -= t2;
@@ -399,21 +447,25 @@ TEST(DyadicTensorTest, MinusEqualsOperator)
 
 TEST(DyadicTensorTest, FrobeniusNorm)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({3, 0}), DenseColumnMatrix({0, 6})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({3, 0}), DenseColumnMatrixGeneric<double, 2>({0, 6})});
   ASSERT_EQ(std::sqrt(45), t.frobeniusNorm());
 }
 
 TEST(DyadicTensorTest, MaxNorm)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({3, 0}), DenseColumnMatrix({0, 6})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({3, 0}), DenseColumnMatrixGeneric<double, 2>({0, 6})});
   ASSERT_EQ(6, t.maxNorm());
 }
 
 TEST(DyadicTensorTest, SetEigens)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({3, 0}), DenseColumnMatrix({0, 6})});
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({3, 0}), DenseColumnMatrixGeneric<double, 2>({0, 6})});
   std::vector<double> eigvals = {3, 4};
-  std::vector<DenseColumnMatrix> eigvecs = {DenseColumnMatrix({0, 1}), DenseColumnMatrix({1, 0})};
+  std::vector<DenseColumnMatrixGeneric<double, 2>> eigvecs = {
+      DenseColumnMatrixGeneric<double, 2>({0, 1}), DenseColumnMatrixGeneric<double, 2>({1, 0})};
   t.setEigens(eigvecs, eigvals);
   ASSERT_EQ(eigvals, t.getEigenvalues());
   ASSERT_EQ(eigvecs, t.getEigenvectors());
@@ -421,17 +473,22 @@ TEST(DyadicTensorTest, SetEigens)
 
 TEST(DyadicTensorTest, SetEigensFail1)
 {
-  Dyadic2DTensor t({DenseColumnMatrix({3, 0}), DenseColumnMatrix({0, 6})});
-  ASSERT_ANY_THROW(t.setEigens({DenseColumnMatrix({0, 1}), DenseColumnMatrix({1, 0})}, {3, 4, 5}));
+  Dyadic2DTensor t(
+      {DenseColumnMatrixGeneric<double, 2>({3, 0}), DenseColumnMatrixGeneric<double, 2>({0, 6})});
+  ASSERT_ANY_THROW(t.setEigens(
+      {DenseColumnMatrixGeneric<double, 2>({0, 1}), DenseColumnMatrixGeneric<double, 2>({1, 0})},
+      {3, 4, 5}));
 }
 
-TEST(DyadicTensorTest, SetEigensFail2)
-{
-  Dyadic2DTensor t({DenseColumnMatrix({3, 0}), DenseColumnMatrix({0, 6})});
-  ASSERT_ANY_THROW(t.setEigens(
-      {DenseColumnMatrix({0, 0, 1}), DenseColumnMatrix({1, 0, 0}), DenseColumnMatrix({0, 1, 0})},
-      {3, 4}));
-}
+// TEST(DyadicTensorTest, SetEigensFail2)
+// {
+  // Dyadic2DTensor t(
+      // {DenseColumnMatrixGeneric<double, 2>({3, 0}), DenseColumnMatrixGeneric<double, 2>({0, 6})});
+  // ASSERT_FAIL(t.setEigens({DenseColumnMatrixGeneric<double, 3>({0, 0, 1}),
+                              // DenseColumnMatrixGeneric<double, 3>({1, 0, 0}),
+                              // DenseColumnMatrixGeneric<double, 3>({0, 1, 0})},
+      // {3, 4}));
+// }
 
 TEST(DyadicTensorTest, EigenSolver)
 {
@@ -439,8 +496,9 @@ TEST(DyadicTensorTest, EigenSolver)
   m << 3, 0, 0, 0, 2, 0.5, 0, 0.5, 1;
   auto t = Dyadic3DTensor(m);
 
-  std::vector<DenseColumnMatrix> expected = {DenseColumnMatrix({1.0, 0, 0}),
-      DenseColumnMatrix({0, 0.923879, 0.382684}), DenseColumnMatrix({0, -0.382681, 0.923881})};
+  std::vector<DenseColumnMatrix> expected = {DenseColumnMatrixGeneric<double, 3>({1.0, 0, 0}),
+      DenseColumnMatrixGeneric<double, 3>({0, 0.923879, 0.382684}),
+      DenseColumnMatrixGeneric<double, 3>({0, -0.382681, 0.923881})};
 
   auto eigvecs = t.getEigenvectors();
 

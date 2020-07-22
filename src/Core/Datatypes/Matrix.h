@@ -42,13 +42,13 @@ namespace Core {
 namespace Datatypes {
 
   /// @todo: use Eigen's Visitor type?
-  template <typename T>
+  template <typename T, int Row>
   struct SCISHARE MatrixVisitorGeneric
   {
     virtual ~MatrixVisitorGeneric() {}
     virtual void visit(DenseMatrixGeneric<T>&) = 0;
     virtual void visit(SparseRowMatrixGeneric<T>&) = 0;
-    virtual void visit(DenseColumnMatrixGeneric<T>&) = 0;
+    virtual void visit(DenseColumnMatrixGeneric<T, Row>&) = 0;
   };
 
   class SCISHARE MatrixIOBase : public Datatype
@@ -64,7 +64,7 @@ namespace Datatypes {
     std::string    raw_filename_;
   };
 
-  template <typename T>
+  template <typename T, int Row>
   class MatrixBase : public MatrixIOBase, public HasPropertyManager
   {
   public:
@@ -73,7 +73,7 @@ namespace Datatypes {
     virtual size_t ncols() const = 0;
     size_t get_dense_size() const { return nrows() * ncols(); }
 
-    using Visitor = MatrixVisitorGeneric<T>;
+    using Visitor = MatrixVisitorGeneric<T, Row>;
     virtual void accept(Visitor& visitor) = 0;
 
     bool empty() const { return 0 == nrows() || 0 == ncols(); }

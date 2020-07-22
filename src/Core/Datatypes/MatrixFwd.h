@@ -35,12 +35,14 @@
 #include <Core/Utils/SmartPointers.h>
 // ReSharper disable once CppUnusedIncludeDirective
 #include <boost/shared_ptr.hpp>
+#include <Eigen/Dense>
+#include "Eigen/src/Core/util/Constants.h"
 
 namespace SCIRun {
 namespace Core {
 namespace Datatypes {
 
-  template <typename T>
+  template <typename T, int Row>
   class MatrixBase;
 
   using Matrix = MatrixBase<double>;
@@ -65,13 +67,28 @@ namespace Datatypes {
   typedef SharedPointer<const DenseMatrix> DenseMatrixConstHandle;
   typedef SharedPointer<ComplexDenseMatrix> ComplexDenseMatrixHandle;
 
-  template <typename T>
+  template <typename T, int Row>
   class DenseColumnMatrixGeneric;
-  template <typename T>
-  using DenseColumnMatrixHandleGeneric = SharedPointer<DenseColumnMatrixGeneric<T>>;
+  // template <typename T>
+  // class DynamicDenseColumnMatrixGeneric : public DenseColumnMatrixGeneric<T, Eigen::Dynamic>
+  // {
+    // using parent = DenseColumnMatrixGeneric<T, Eigen::Dynamic>;
+    // using parent::parent;
+  // };
+  // template <int Row>
+  // class FixedDenseColumnMatrix : public DenseColumnMatrixGeneric<double, Row>
+  // {
+    // using parent = DenseColumnMatrixGeneric<double, Row>;
+    // using parent::parent;
+  // };
 
-  typedef DenseColumnMatrixGeneric<double> DenseColumnMatrix;
-  using ComplexDenseColumnMatrix = DenseColumnMatrixGeneric<complex>;
+  template <typename T, int Row>
+  using DenseColumnMatrixHandleGeneric = SharedPointer<DenseColumnMatrixGeneric<T, Row>>;
+  // template <typename T>
+  // using DynamicDenseColumnMatrixHandleGeneric = SharedPointer<DynamicDenseColumnMatrixGeneric<T>>;
+
+  typedef DenseColumnMatrixGeneric<double, Eigen::Dynamic> DenseColumnMatrix;
+  using ComplexDenseColumnMatrix = DenseColumnMatrixGeneric<complex, Eigen::Dynamic>;
 
   typedef SharedPointer<DenseColumnMatrix> DenseColumnMatrixHandle;
   typedef SharedPointer<const DenseColumnMatrix> DenseColumnMatrixConstHandle;

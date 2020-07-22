@@ -319,8 +319,8 @@ namespace Datatypes {
 
 #define COLUMNMATRIX_VERSION 3
 
-  template <typename T>
-  void DenseColumnMatrixGeneric<T>::io(Piostream& stream)
+  template <typename T, int Row>
+  void DenseColumnMatrixGeneric<T, Row>::io(Piostream& stream)
   {
     int version = stream.begin_class("ColumnMatrix", COLUMNMATRIX_VERSION);
 

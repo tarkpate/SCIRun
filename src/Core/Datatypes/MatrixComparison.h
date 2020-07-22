@@ -80,7 +80,7 @@ namespace Datatypes {
   }
 
   template <typename T>
-  bool operator==(const DenseColumnMatrixGeneric<T>& lhs, const DenseColumnMatrixGeneric<T>& rhs)
+  bool operator==(const DenseColumnMatrixGeneric<T, Eigen::Dynamic>& lhs, const DenseColumnMatrixGeneric<T, Eigen::Dynamic>& rhs)
   {
     bool returnValue = (lhs.rows() == rhs.rows());
 
@@ -95,7 +95,7 @@ namespace Datatypes {
   }
 
   template <typename T>
-  bool operator!=(const DenseColumnMatrixGeneric<T>& lhs, const DenseColumnMatrixGeneric<T>& rhs)
+  bool operator!=(const DenseColumnMatrixGeneric<T, Eigen::Dynamic>& lhs, const DenseColumnMatrixGeneric<T, Eigen::Dynamic>& rhs)
   {
     return !(lhs == rhs);
   }

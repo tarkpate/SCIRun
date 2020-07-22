@@ -30,6 +30,7 @@
 #define CORE_DATATYPES_DENSE_COLUMN_MATRIX_H
 
 #include <Core/Datatypes/Matrix.h>
+#include <Core/Datatypes/MatrixFwd.h>
 #define register
 #include <Eigen/Dense>
 #undef register
@@ -38,13 +39,13 @@ namespace SCIRun {
 namespace Core {
 namespace Datatypes {
 
-  template <typename T>
-  class DenseColumnMatrixGeneric : public MatrixBase<T>, public Eigen::Matrix<T, Eigen::Dynamic, 1>
+  template <typename T, int Row>
+  class DenseColumnMatrixGeneric : public MatrixBase<T>, public Eigen::Matrix<T, Row, 1>
   {
   public:
     typedef T value_type;
-    typedef DenseColumnMatrixGeneric<T> this_type;
-    typedef Eigen::Matrix<T, Eigen::Dynamic, 1> EigenBase;
+    typedef DenseColumnMatrixGeneric<T, Row> this_type;
+    typedef Eigen::Matrix<T, Row, 1> EigenBase;
 
     explicit DenseColumnMatrixGeneric(size_t nrows = 0) : EigenBase(nrows) {}
 
@@ -73,7 +74,7 @@ namespace Datatypes {
       return new DenseColumnMatrixGeneric(*this);
     }
 
-    virtual void accept(MatrixVisitorGeneric<T>& visitor) override
+    virtual void accept(MatrixVisitorGeneric<T, Row>& visitor) override
     {
       visitor.visit(*this);
     }
@@ -101,14 +102,14 @@ namespace Datatypes {
     }
   };
 
-  template <typename T>
+  template <typename T, int Row>
   static Persistent* ColumnMatrixMaker()
   {
-    return new DenseColumnMatrixGeneric<T>();
+    return new DenseColumnMatrixGeneric<T, Row>();
   }
 
-  template <typename T>
-  PersistentTypeID DenseColumnMatrixGeneric<T>::type_id("ColumnMatrix", "MatrixBase", ColumnMatrixMaker<T>);
+  template <typename T, int Row>
+  PersistentTypeID DenseColumnMatrixGeneric<T, Row>::type_id("ColumnMatrix", "MatrixBase", ColumnMatrixMaker<T, Row>);
 
 }}}
 

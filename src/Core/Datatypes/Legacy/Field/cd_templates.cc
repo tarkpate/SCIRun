@@ -68,7 +68,7 @@ namespace SCIRun
     {
       template class MatrixBase<double>;
       template class SparseRowMatrixGeneric<double>;
-      template class DenseColumnMatrixGeneric<double>;
+      template <int Row> class DenseColumnMatrixGeneric<double, Row>;
     }
   }
 }

@@ -114,7 +114,7 @@ Out SolveLinearSystemAlgorithm::runImpl(const In& input, const Parameters& param
 
   auto method = std::get<2>(params);
 
-  using SolutionType = DenseColumnMatrixGeneric<typename std::tuple_element<0, In>::type::element_type::value_type>;
+  using SolutionType = DenseColumnMatrixGeneric<typename std::tuple_element<0, In>::type::element_type::value_type, Eigen::Dynamic>;
   using AlgoTypeCG = SolveLinearSystemAlgorithmEigenCGImpl<SolutionType, CG>;
   using AlgoTypeBiCG = SolveLinearSystemAlgorithmEigenCGImpl<SolutionType, BiCG>;
 

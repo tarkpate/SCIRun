@@ -109,7 +109,7 @@ void AddMatrices::visit(SparseRowMatrixGeneric<double>& sparse)
   default: break;
   }
 }
-void AddMatrices::visit(DenseColumnMatrixGeneric<double>& column)
+void AddMatrices::visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column)
 {
   switch (typeCode_)
   {
@@ -170,7 +170,7 @@ void MultiplyMatrices::visit(SparseRowMatrixGeneric<double>& sparse)
   default: break;
   }
 }
-void MultiplyMatrices::visit(DenseColumnMatrixGeneric<double>& column)
+void MultiplyMatrices::visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column)
 {
   switch (typeCode_)
   {
@@ -197,7 +197,7 @@ void NegateMatrix::visit(SparseRowMatrixGeneric<double>& sparse)
 {
   sparse *= -1;
 }
-void NegateMatrix::visit(DenseColumnMatrixGeneric<double>& column)
+void NegateMatrix::visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column)
 {
   column *= -1;
 }
@@ -210,7 +210,7 @@ void ScalarMultiplyMatrix::visit(SparseRowMatrixGeneric<double>& sparse)
 {
   sparse *= scalar_;
 }
-void ScalarMultiplyMatrix::visit(DenseColumnMatrixGeneric<double>& column)
+void ScalarMultiplyMatrix::visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column)
 {
   column *= scalar_;
 }

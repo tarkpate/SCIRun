@@ -30,6 +30,7 @@
 #define CORE_DATATYPES_MATRIX_MATH_VISITORS_H
 
 #include <Core/Datatypes/Matrix.h>
+#include <Core/Datatypes/DenseColumnMatrix.h>
 #include <Core/Datatypes/share.h>
 
 namespace SCIRun {
@@ -53,7 +54,7 @@ namespace SCIRun {
 
           virtual void visit(DenseMatrixGeneric<double>& dense) override;
           virtual void visit(SparseRowMatrixGeneric<double>& sparse) override;
-          virtual void visit(DenseColumnMatrixGeneric<double>& column) override;
+          virtual void visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column) override;
 
           MatrixHandle sum_;
         };
@@ -65,7 +66,7 @@ namespace SCIRun {
 
           virtual void visit(DenseMatrixGeneric<double>& dense) override;
           virtual void visit(SparseRowMatrixGeneric<double>& sparse) override;
-          virtual void visit(DenseColumnMatrixGeneric<double>& column) override;
+          virtual void visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column) override;
 
           MatrixHandle getProduct() const { return product_; }
         private:
@@ -77,7 +78,7 @@ namespace SCIRun {
         public:
           virtual void visit(DenseMatrixGeneric<double>& dense) override;
           virtual void visit(SparseRowMatrixGeneric<double>& sparse) override;
-          virtual void visit(DenseColumnMatrixGeneric<double>& column) override;
+          virtual void visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column) override;
         };
 
         class SCISHARE ScalarMultiplyMatrix : public Matrix::Visitor
@@ -86,7 +87,7 @@ namespace SCIRun {
           explicit ScalarMultiplyMatrix(double scalar) : scalar_(scalar) {}
           virtual void visit(DenseMatrixGeneric<double>& dense) override;
           virtual void visit(SparseRowMatrixGeneric<double>& sparse) override;
-          virtual void visit(DenseColumnMatrixGeneric<double>& column) override;
+          virtual void visit(DenseColumnMatrixGeneric<double, Eigen::Dynamic>& column) override;
         private:
           double scalar_;
         };
@@ -105,7 +106,7 @@ namespace SCIRun {
           value_ = m.rows() * m.cols();
         }
 
-        virtual void visit(DenseColumnMatrixGeneric<T>& m) override
+        virtual void visit(DenseColumnMatrixGeneric<T, Eigen::Dynamic>& m) override
         {
           value_ = m.nrows();
         }
@@ -130,7 +131,7 @@ namespace SCIRun {
             value_ = m.minCoeff();
         }
 
-        virtual void visit(DenseColumnMatrixGeneric<T>& m)
+        virtual void visit(DenseColumnMatrixGeneric<T, Eigen::Dynamic>& m)
         {
           if (!m.empty())
             value_ = m.minCoeff();
@@ -163,7 +164,7 @@ namespace SCIRun {
             value_ = m.maxCoeff();
         }
 
-        virtual void visit(DenseColumnMatrixGeneric<T>& m)
+        virtual void visit(DenseColumnMatrixGeneric<T, Eigen::Dynamic>& m)
         {
           if (!m.empty())
             value_ = m.maxCoeff();
