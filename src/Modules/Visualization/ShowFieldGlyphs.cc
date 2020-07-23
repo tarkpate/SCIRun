@@ -35,7 +35,7 @@
 #include <Core/Datatypes/Mesh/MeshFacade.h>
 #include <Core/Datatypes/ColorMap.h>
 #include <Core/GeometryPrimitives/Vector.h>
-#include <Core/GeometryPrimitives/Tensor.h>
+#include <Core/Datatypes/Dyadic3DTensor.h>
 #include <Graphics/Glyphs/GlyphGeom.h>
 #include <Core/Datatypes/Legacy/Field/FieldInformation.h>
 #include <Core/Algorithms/Base/AlgorithmPreconditions.h>
@@ -740,34 +740,33 @@ void GlyphBuilder::renderTensors(
   {
     interruptible->checkForInterruption();
 
-    Tensor t = portHandler_->getPrimaryTensor(indices[i]);
+    Dyadic3DTensor t = portHandler_->getPrimaryTensor(indices[i]);
 
-    double eigen1, eigen2, eigen3;
-    t.get_eigenvalues(eigen1, eigen2, eigen3);
-    Vector eigvals(fabs(eigen1), fabs(eigen2), fabs(eigen3));
+    auto eigvals = t.getEigenvalues();
 
     // Counter for negative eigen values
-    if(eigen1 < -epsilon || eigen2 < -epsilon || eigen3 < -epsilon) ++neg_eigval_count;
+    if (eigvals[0] < -epsilon || eigvals[1] < -epsilon || eigvals[2] < -epsilon) ++neg_eigval_count;
 
-    Vector eigvec1, eigvec2, eigvec3;
-    t.get_eigenvectors(eigvec1, eigvec2, eigvec3);
+    for (auto& e : eigvals)
+      e = fabs(e);
+
+
+    auto eigvecs = t.getEigenvectors();
 
     // Checks to see if eigenvalues are below defined threshold
-    bool vector_eig_x_0 = eigvals.x() <= vectorThreshold;
-    bool vector_eig_y_0 = eigvals.y() <= vectorThreshold;
-    bool vector_eig_z_0 = eigvals.z() <= vectorThreshold;
-    bool point_eig_x_0 = eigvals.x() <= pointThreshold;
-    bool point_eig_y_0 = eigvals.y() <= pointThreshold;
-    bool point_eig_z_0 = eigvals.z() <= pointThreshold;
+    std::vector<bool> vector_eig = {eigvals[0] <= vectorThreshold, eigvals[1] <= vectorThreshold,
+        eigvals[2] <= vectorThreshold};
+    std::vector<bool> point_eig = {
+        eigvals[0] <= pointThreshold, eigvals[1] <= pointThreshold, eigvals[2] <= pointThreshold};
 
-    bool order0Tensor = (point_eig_x_0 && point_eig_y_0 && point_eig_z_0);
-    bool order1Tensor = (vector_eig_x_0 + vector_eig_y_0 + vector_eig_z_0) >= 2;
+    bool order0Tensor = (point_eig[0] && point_eig[1] && point_eig[2]);
+    bool order1Tensor = (vector_eig[0] + vector_eig[1] + vector_eig[2]) >= 2;
 
     ColorRGB node_color = portHandler_->getNodeColor(indices[i]);
 
     // Do not render tensors that are too small - because surfaces
     // are not renderd at least two of the scales must be non zero.
-    if(!renderGlyphsBelowThreshold && t.magnitude() < threshold) continue;
+    if(!renderGlyphsBelowThreshold && t.frobeniusNorm() < threshold) continue;
 
     if(order0Tensor)
     {
@@ -776,12 +775,12 @@ void GlyphBuilder::renderTensors(
     else if(order1Tensor)
     {
       Vector dir;
-      if(vector_eig_x_0 && vector_eig_y_0)
-        dir = eigvec3 * eigvals[2];
-      else if(vector_eig_y_0 && vector_eig_z_0)
-        dir = eigvec1 * eigvals[0];
-      else if(vector_eig_x_0 && vector_eig_z_0)
-        dir = eigvec2 * eigvals[1];
+      if(vector_eig[0] && vector_eig[1])
+        dir = eigvecs[2] * eigvals[2];
+      else if(vector_eig[1] && vector_eig[2])
+        dir = eigvecs[0] * eigvals[0];
+      else if(vector_eig[0] && vector_eig[2])
+        dir = eigvecs[1] * eigvals[1];
       // Point p1 = points[i];
       // Point p2 = points[i] + dir;
       addGlyph(tensor_line_glyphs, RenderState::GlyphType::LINE_GLYPH, points[i], dir, scale, scale, scale, resolution, node_color, true);

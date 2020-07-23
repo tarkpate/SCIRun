@@ -36,7 +36,7 @@ using namespace Graphics;
 using namespace Core::Geometry;
 using namespace Core::Datatypes;
 
-TensorGlyphBuilder::TensorGlyphBuilder(const Tensor& t, const Point& center)
+TensorGlyphBuilder::TensorGlyphBuilder(const Dyadic3DTensor& t, const Point& center)
 {
   t_ = t;
   center_ = Point(center);
@@ -47,29 +47,19 @@ void TensorGlyphBuilder::scaleTensor(double scale)
   t_ = t_ * scale;
 }
 
-std::vector<Vector> TensorGlyphBuilder::getEigenVectors()
+std::vector<DenseColumnMatrix> TensorGlyphBuilder::getEigenVectors()
 {
-  std::vector<Vector> eigvecs(DIMENSIONS_);
-  t_.get_eigenvectors(eigvecs[0], eigvecs[1], eigvecs[2]);
-  return eigvecs;
+  return t_.getEigenvectors();
 }
 
-std::vector<double> TensorGlyphBuilder::getEigenValues()
+DenseColumnMatrix TensorGlyphBuilder::getEigenValues()
 {
-  std::vector<double> eigvals(DIMENSIONS_);
-  t_.get_eigenvalues(eigvals[0], eigvals[1], eigvals[2]);
-  return eigvals;
+  return t_.getEigenvalues();
 }
 
 void TensorGlyphBuilder::normalizeTensor()
 {
-  auto eigvecs = getEigenVectors();
-  for (auto& v : eigvecs)
-    v.normalize();
-
-  auto norm = t_.euclidean_norm();
-  t_.set_outside_eigens(eigvecs[0] * norm[0], eigvecs[1] * norm[1], eigvecs[2] * norm[2],
-                        norm[0], norm[1], norm[2]);
+  t_.normalize();
 }
 
 void TensorGlyphBuilder::setColor(const ColorRGB& color)
@@ -82,21 +72,21 @@ void TensorGlyphBuilder::setResolution(double resolution)
   resolution_ = resolution;
 }
 
-void TensorGlyphBuilder::reorderTensorValues(std::vector<Vector>& eigvecs,
-                                             std::vector<double>& eigvals)
-{
-  std::vector<std::pair<double, Vector>> sortList(3);
-  for(int d = 0; d < DIMENSIONS_; ++d)
-    sortList[d] = std::make_pair(eigvals[d], eigvecs[d]);
+// void TensorGlyphBuilder::reorderTensorValues(std::vector<Vector>& eigvecs,
+//                                              std::vector<double>& eigvals)
+// {
+//   std::vector<std::pair<double, Vector>> sortList(3);
+//   for(int d = 0; d < DIMENSIONS_; ++d)
+//     sortList[d] = std::make_pair(eigvals[d], eigvecs[d]);
 
-  std::sort(std::begin(sortList), std::end(sortList), std::greater<std::pair<double, Vector>>());
+//   std::sort(std::begin(sortList), std::end(sortList), std::greater<std::pair<double, Vector>>());
 
-  for(int d = 0; d < DIMENSIONS_; ++d)
-  {
-    eigvals[d] = sortList[d].first;
-    eigvecs[d] = sortList[d].second;
-  }
-}
+//   for(int d = 0; d < DIMENSIONS_; ++d)
+//   {
+//     eigvals[d] = sortList[d].first;
+//     eigvecs[d] = sortList[d].second;
+//   }
+// }
 void TensorGlyphBuilder::makeTensorPositive()
 {
   static const double zeroThreshold = 0.000001;
@@ -111,10 +101,10 @@ void TensorGlyphBuilder::makeTensorPositive()
   }
 
   // These are exactly zero after thresholding
-  flatTensor_ = eigvals[0] == 0 || eigvals[1] == 0 || eigvals[2] == 0;
+  // flatTensor_ = eigvals[0] == 0 || eigvals[1] == 0 || eigvals[2] == 0;
 
-  if (flatTensor_)
-    reorderTensorValues(eigvecs, eigvals);
+  // if (flatTensor_)
+    // reorderTensorValues(eigvecs, eigvals);
 
   for (int d = 0; d < DIMENSIONS_; ++d)
     if (eigvals[d] == 0)
@@ -124,8 +114,7 @@ void TensorGlyphBuilder::makeTensorPositive()
       break;
     }
 
-  t_.set_outside_eigens(eigvecs[0], eigvecs[1], eigvecs[2],
-                        eigvals[0], eigvals[1], eigvals[2]);
+  t_.setEigens(eigvecs, eigvals);
 }
 
 void TensorGlyphBuilder::computeSinCosTable(bool half)

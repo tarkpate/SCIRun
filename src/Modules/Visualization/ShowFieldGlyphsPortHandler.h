@@ -41,7 +41,7 @@
 #include <Core/Datatypes/Geometry.h>
 #include <Graphics/Datatypes/GeometryImpl.h>
 #include <Core/GeometryPrimitives/Vector.h>
-#include <Core/GeometryPrimitives/Tensor.h>
+#include <Core/Datatypes/Dyadic3DTensor.h>
 
 namespace SCIRun{
   namespace Modules{
@@ -71,7 +71,7 @@ namespace SCIRun{
         Core::Datatypes::ColorRGB defaultColor;
         boost::optional<Core::Datatypes::ColorMapHandle> colorMap;
         Core::Datatypes::ColorMapHandle coordinateMap {nullptr}, textureMap {nullptr};
-        boost::optional<Core::Geometry::Tensor> pinputTensor, sinputTensor, tinputTensor;
+        boost::optional<Core::Datatypes::Dyadic3DTensor> pinputTensor, sinputTensor, tinputTensor;
         boost::optional<Core::Geometry::Vector> pinputVector, sinputVector, tinputVector;
         boost::optional<double> pinputScalar, sinputScalar, tinputScalar;
         double current_index;
@@ -85,7 +85,7 @@ namespace SCIRun{
         Core::Datatypes::ColorRGB getColorMapVal(int index);
 
         // Returns color vector to be used for rgb conversion of tensors
-        Core::Geometry::Vector getTensorColorVector(Core::Geometry::Tensor& t);
+        Core::Geometry::Vector getTensorColorVector(Core::Datatypes::Dyadic3DTensor& t);
 
      public:
         ShowFieldGlyphsPortHandler(
@@ -128,7 +128,7 @@ namespace SCIRun{
         Core::Geometry::Vector getPrimaryVector(int index);
 
         // Return primary vector
-        Core::Geometry::Tensor getPrimaryTensor(int index);
+        Core::Datatypes::Dyadic3DTensor getPrimaryTensor(int index);
 
         // Get primary field information
         const FieldInformation getPrimaryFieldInfo();

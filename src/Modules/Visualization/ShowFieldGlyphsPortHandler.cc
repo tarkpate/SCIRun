@@ -30,6 +30,7 @@
 
 #include <Modules/Visualization/ShowFieldGlyphsPortHandler.h>
 #include <Core/Logging/Log.h>
+#include <Core/Datatypes/TensorFwd.h>
 
 using namespace SCIRun;
 using namespace Modules::Visualization;
@@ -211,7 +212,7 @@ namespace SCIRun{
           }
           else if (pf_data_type == FieldDataType::Tensor)
           {
-            Geometry::Tensor t;
+            Dyadic3DTensor t;
             p_vfld->get_value(t, index);
             pinputTensor = t;
           }
@@ -232,7 +233,7 @@ namespace SCIRun{
           }
           else if (sf_data_type == FieldDataType::Tensor)
           {
-            Geometry::Tensor t;
+            Dyadic3DTensor t;
             s_vfld->get_value(t, index);
             sinputTensor = t;
           }
@@ -253,7 +254,7 @@ namespace SCIRun{
           }
           else if (tf_data_type == FieldDataType::Tensor)
           {
-            Geometry::Tensor t;
+            Dyadic3DTensor t;
             t_vfld->get_value(t, index);
             tinputTensor = t;
           }
@@ -488,7 +489,7 @@ namespace SCIRun{
       }
 
       // Returns color vector for tensor that are using rgb conversion
-      Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(Geometry::Tensor& t)
+      Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(Dyadic3DTensor& t)
       {
         Geometry::Vector colorVector;
         double eigval1, eigval2, eigval3;
@@ -619,7 +620,7 @@ namespace SCIRun{
       }
 
       // Return primary vector
-      Geometry::Tensor ShowFieldGlyphsPortHandler::getPrimaryTensor(int index)
+      Dyadic3DTensor ShowFieldGlyphsPortHandler::getPrimaryTensor(int index)
       {
         getFieldData(index);
 

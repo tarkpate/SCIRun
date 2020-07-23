@@ -208,6 +208,11 @@ namespace Core {
       size_t getDimension1() const { return Dim; }
       size_t getDimension2() const { return Dim; }
 
+      DenseColumnMatrix getNormalizedEigenvalues()
+      {
+        return getEigenvalues() / frobeniusNorm();
+      }
+
       Number frobeniusNorm() const
       {
         if (!haveEigens_) buildEigens();
@@ -234,6 +239,13 @@ namespace Core {
         eigvecs_ = eigvecs;
         eigvals_ = eigvals;
         haveEigens_ = true;
+        setTensorValues();
+      }
+
+      void normalize()
+      {
+        eigvals_ = getNormalizedEigenvalues();
+        setTensorValues();
       }
 
       Number eigenValueSum() const

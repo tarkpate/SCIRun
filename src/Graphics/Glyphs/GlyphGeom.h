@@ -31,11 +31,12 @@
 
 #include <Core/Algorithms/Visualization/RenderFieldState.h>
 #include <Core/GeometryPrimitives/GeomFwd.h>
-#include <Core/GeometryPrimitives/Tensor.h>
+#include <Core/Datatypes/Dyadic3DTensor.h>
 #include <Core/Math/TrigTable.h>
 #include <Graphics/Datatypes/GeometryImpl.h>
 #include <Core/Datatypes/Color.h>
 #include <Graphics/Glyphs/GlyphConstructor.h>
+#include <Core/Datatypes/TensorFwd.h>
 
 #include <Graphics/Glyphs/share.h>
 
@@ -61,11 +62,11 @@ public:
                 bool render_cone_base);
   void addSphere(const Core::Geometry::Point& p, double radius, int resolution,
                  const Core::Datatypes::ColorRGB& color);
-  void addBox(const Core::Geometry::Point& center, Core::Geometry::Tensor& t, double scale,
+  void addBox(const Core::Geometry::Point& center, Core::Datatypes::Dyadic3DTensor& t, double scale,
               Core::Datatypes::ColorRGB& color, bool normalize);
-  void addEllipsoid(const Core::Geometry::Point& center, Core::Geometry::Tensor& t, double scale,
+  void addEllipsoid(const Core::Geometry::Point& center, Core::Datatypes::Dyadic3DTensor& t, double scale,
                     int resolution, const Core::Datatypes::ColorRGB& color, bool normalize);
-  void addSuperquadricTensor(const Core::Geometry::Point& center, Core::Geometry::Tensor& t,
+  void addSuperquadricTensor(const Core::Geometry::Point& center, Core::Datatypes::Dyadic3DTensor& t,
                              double scale, int resolution, const Core::Datatypes::ColorRGB& color,
                              bool normalize, double emphasis);
   void addCylinder(const Core::Geometry::Point& p1, const Core::Geometry::Point& p2, double radius,

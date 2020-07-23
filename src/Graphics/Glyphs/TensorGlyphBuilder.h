@@ -30,7 +30,7 @@
 #define Graphics_Glyphs_TENSOR_GLYPH_BUILDER_H
 
 #include <Core/GeometryPrimitives/Transform.h>
-#include <Core/GeometryPrimitives/Tensor.h>
+#include <Core/Datatypes/Dyadic3DTensor.h>
 #include <Core/GeometryPrimitives/Point.h>
 #include <Core/GeometryPrimitives/Vector.h>
 #include <Core/Datatypes/Color.h>
@@ -43,9 +43,9 @@ namespace Graphics {
 class SCISHARE TensorGlyphBuilder
 {
 public:
-  TensorGlyphBuilder(const Core::Geometry::Tensor& t, const Core::Geometry::Point& center);
+  TensorGlyphBuilder(const Core::Datatypes::Dyadic3DTensor& t, const Core::Geometry::Point& center);
   void scaleTensor(double scale);
-  void reorderTensorValues(std::vector<Core::Geometry::Vector>& eigvecs, std::vector<double>& eigvals);
+  // void reorderTensorValues(std::vector<Core::Geometry::Vector>& eigvecs, std::vector<double>& eigvals);
   void makeTensorPositive();
   void normalizeTensor();
   void setColor(const Core::Datatypes::ColorRGB& color);
@@ -66,15 +66,15 @@ private:
                        const Core::Geometry::Vector& p3, const Core::Geometry::Vector& p4,
                        const Core::Geometry::Vector& normal);
   std::vector<Core::Geometry::Vector> generateBoxPoints();
-  std::vector<Core::Geometry::Vector> getEigenVectors();
-  std::vector<double> getEigenValues();
+  std::vector<Core::Datatypes::DenseColumnMatrix> getEigenVectors();
+  Core::Datatypes::DenseColumnMatrix getEigenValues();
   void computeTransforms();
   void postScaleTransorms();
   void computeSinCosTable(bool half);
 
   const static int DIMENSIONS_ = 3;
   const static int BOX_FACE_POINTS_ = 4;
-  Core::Geometry::Tensor t_;
+  Core::Datatypes::Dyadic3DTensor t_;
   Core::Geometry::Point center_;
   Core::Geometry::Transform trans_, rotate_;
   Core::Datatypes::ColorRGB color_ = {1.0, 1.0, 1.0};
