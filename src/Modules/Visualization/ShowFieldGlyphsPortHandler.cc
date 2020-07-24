@@ -502,11 +502,7 @@ namespace SCIRun{
         for (auto& e : eigvals)
           e = std::abs(e);
 
-        std::cout << "before newt\n";
-        std::cout << "eigvecs size " << t.getEigenvectors().size() << "\n";
         Dyadic3DTensor newT(t.getEigenvectors(), eigvals);
-        std::cout << "after newt\n";
-
         eigvals = newT.getEigenvalues();
         auto eigvecs = newT.getEigenvectors();
 
