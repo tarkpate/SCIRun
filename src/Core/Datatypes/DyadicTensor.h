@@ -92,7 +92,7 @@ namespace Core {
         haveEigens_ = true;
       }
 
-      DyadicTensorGeneric(const Eigen::TensorFixedSize<Number, Eigen::Sizes<Dim, Dim>>& other)
+      DyadicTensorGeneric(const parent& other)
           : parent()
       {
         for (size_t i = 0; i < Dim; ++i)
@@ -113,6 +113,18 @@ namespace Core {
       using parent::operator=;
       using parent::contract;
 
+      DyadicTensorGeneric<Number, Dim>& operator=(const DyadicTensorGeneric<Number, Dim>& other)
+      {
+        parent::operator=(other);
+        return *this;
+      }
+
+      DyadicTensorGeneric<Number, Dim>& operator=(const parent other)
+      {
+        parent::operator=(other);
+        return *this;
+      }
+
       template <typename OtherDerived>
       bool operator!=(const OtherDerived& other) const
       {
@@ -128,6 +140,27 @@ namespace Core {
           for (size_t j = 0; j < Dim; ++j)
             if ((*this)(index(i), index(j)) != otherTensor(index(i), index(j))) return false;
         return true;
+      }
+
+      template <typename OtherDerived>
+      DyadicTensorGeneric<Number, Dim> operator*(const OtherDerived& other) const
+      {
+        DyadicTensorGeneric<Number, Dim> newTensor(parent::operator*(other));
+        return newTensor;
+      }
+
+      template <typename OtherDerived>
+      DyadicTensorGeneric<Number, Dim> operator+(const OtherDerived& other) const
+      {
+        DyadicTensorGeneric<Number, Dim> newTensor(parent::operator+(other));
+        return newTensor;
+      }
+
+      template <typename OtherDerived>
+      DyadicTensorGeneric<Number, Dim> operator-(const OtherDerived& other) const
+      {
+        DyadicTensorGeneric<Number, Dim> newTensor(parent::operator-(other));
+        return newTensor;
       }
 
       void setEigenVectors(const std::vector<VectorType>& eigvecs)
@@ -210,9 +243,13 @@ namespace Core {
       size_t getDimension1() const { return Dim; }
       size_t getDimension2() const { return Dim; }
 
-      DenseColumnMatrix getNormalizedEigenvalues()
+      std::vector<Number> getNormalizedEigenvalues()
       {
-        return getEigenvalues() / frobeniusNorm();
+        auto eigvals = getEigenvalues();
+        auto fro = frobeniusNorm();
+        for (auto& e : eigvals)
+          e /= fro;
+        return eigvals;
       }
 
       Number frobeniusNorm() const
@@ -230,8 +267,7 @@ namespace Core {
         return maxVal;
       }
 
-      void setEigens(
-          const std::vector<VectorType>& eigvecs, const std::vector<Number>& eigvals) const
+      void setEigens(const std::vector<VectorType>& eigvecs, const std::vector<Number>& eigvals)
       {
         if (eigvecs_.size() != eigvecs.size())
           THROW_INVALID_ARGUMENT("The number of input eigvecs must be " + eigvecs_.size());

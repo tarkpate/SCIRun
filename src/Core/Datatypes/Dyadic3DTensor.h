@@ -47,18 +47,27 @@ namespace Core {
       using parent::operator=;
       using parent::operator==;
 
-      explicit Dyadic3DTensorGeneric(
-          const std::initializer_list<VectorType>& eigvecs)
-          : parent()
+      explicit Dyadic3DTensorGeneric(const std::initializer_list<VectorType>& eigvecs) : parent()
       {
         if (eigvecs.size() != DIM_)
           THROW_INVALID_ARGUMENT("The number of input parameters must be " + DIM_);
         parent::setEigenVectors(eigvecs);
       }
 
-      Dyadic3DTensorGeneric(const VectorType& eigvec0,
-          const VectorType& eigvec1,
-          const VectorType& eigvec2)
+      Dyadic3DTensorGeneric(const Dyadic3DTensorGeneric<Number>& other)
+        : parent()
+      {
+        for (size_t i = 0; i < DIM_; ++i)
+          for (size_t j = 0; j < DIM_; ++j)
+            (*this)(i, j) = other(i, j);
+      }
+
+      Dyadic3DTensorGeneric(const parent& other)
+        : parent(other)
+      {}
+
+      Dyadic3DTensorGeneric(
+          const VectorType& eigvec0, const VectorType& eigvec1, const VectorType& eigvec2)
           : parent()
       {
         parent::setEigenVectors({eigvec0, eigvec1, eigvec2});
@@ -73,7 +82,6 @@ namespace Core {
         (*this)(0, 1) = (*this)(1, 0) = v2;
         (*this)(0, 2) = (*this)(2, 0) = v3;
         (*this)(1, 2) = (*this)(2, 1) = v5;
-        parent::buildEigens();
       }
 
       Number linearCertainty()
@@ -103,9 +111,21 @@ namespace Core {
           eigvecs[i] *= eigvals[i];
 
         static const double sqrt2 = std::sqrt(2);
-        VectorType mandel({eigvecs[0][0], eigvecs[1][1], eigvecs[2][2],
-            eigvecs[0][1] * sqrt2, eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2});
+        VectorType mandel({eigvecs[0][0], eigvecs[1][1], eigvecs[2][2], eigvecs[0][1] * sqrt2,
+            eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2});
         return mandel;
+      }
+
+      Dyadic3DTensorGeneric<Number> operator=(Dyadic3DTensorGeneric<Number>&& other)
+      {
+        parent::operator=(other);
+        return *this;
+      }
+
+      Dyadic3DTensorGeneric<Number> operator=(const Dyadic3DTensorGeneric<Number>& other)
+      {
+        parent::operator=(static_cast<parent>(other));
+        return *this;
       }
 
      private:

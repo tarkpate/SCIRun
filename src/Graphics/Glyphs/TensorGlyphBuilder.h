@@ -66,8 +66,6 @@ private:
                        const Core::Geometry::Vector& p3, const Core::Geometry::Vector& p4,
                        const Core::Geometry::Vector& normal);
   std::vector<Core::Geometry::Vector> generateBoxPoints();
-  std::vector<Core::Datatypes::DenseColumnMatrix> getEigenVectors();
-  Core::Datatypes::DenseColumnMatrix getEigenValues();
   void computeTransforms();
   void postScaleTransorms();
   void computeSinCosTable(bool half);

@@ -28,9 +28,9 @@
 
 /// @todo Documentation Modules/Visualization/ShowFieldGlyphs.h
 
-#include <Modules/Visualization/ShowFieldGlyphsPortHandler.h>
 #include <Core/Logging/Log.h>
-#include <Core/Datatypes/TensorFwd.h>
+#include <Core/GeometryPrimitives/Tensor.h>
+#include <Modules/Visualization/ShowFieldGlyphsPortHandler.h>
 
 using namespace SCIRun;
 using namespace Modules::Visualization;
@@ -212,7 +212,7 @@ namespace SCIRun{
           }
           else if (pf_data_type == FieldDataType::Tensor)
           {
-            Dyadic3DTensor t;
+            Geometry::Tensor t;
             p_vfld->get_value(t, index);
             pinputTensor = t;
           }
@@ -233,7 +233,7 @@ namespace SCIRun{
           }
           else if (sf_data_type == FieldDataType::Tensor)
           {
-            Dyadic3DTensor t;
+            Geometry::Tensor t;
             s_vfld->get_value(t, index);
             sinputTensor = t;
           }
@@ -254,7 +254,7 @@ namespace SCIRun{
           }
           else if (tf_data_type == FieldDataType::Tensor)
           {
-            Dyadic3DTensor t;
+            Geometry::Tensor t;
             t_vfld->get_value(t, index);
             tinputTensor = t;
           }
@@ -327,6 +327,12 @@ namespace SCIRun{
             break;
         }
         return colorMapVal;
+      }
+
+      Dyadic3DTensor scirunTensorToEigenTensor(const Geometry::Tensor& t)
+      {
+        Dyadic3DTensor newTensor(t.xx(), t.xy(), t.xz(), t.yy(), t.yz(), t.zz());
+        return newTensor;
       }
 
       // Verifies that data is valid. Run this after initialization
@@ -458,7 +464,7 @@ namespace SCIRun{
               }
             else
               {
-                colorVector = getTensorColorVector(pinputTensor.get());
+                colorVector = getTensorColorVector(scirunTensorToEigenTensor(pinputTensor.get()));
               }
             break;
           case RenderState::InputPort::SECONDARY_PORT:
@@ -468,7 +474,7 @@ namespace SCIRun{
               }
             else
               {
-                colorVector = getTensorColorVector(sinputTensor.get());
+                colorVector = getTensorColorVector(scirunTensorToEigenTensor(sinputTensor.get()));
               }
             break;
           case RenderState::InputPort::TERTIARY_PORT:
@@ -478,7 +484,7 @@ namespace SCIRun{
               }
             else
               {
-                colorVector = getTensorColorVector(tinputTensor.get());
+                colorVector = getTensorColorVector(scirunTensorToEigenTensor(tinputTensor.get()));
               }
             break;
           default:
@@ -489,40 +495,34 @@ namespace SCIRun{
       }
 
       // Returns color vector for tensor that are using rgb conversion
-      Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(Dyadic3DTensor& t)
+      Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(const Dyadic3DTensor& t)
       {
-        Geometry::Vector colorVector;
-        double eigval1, eigval2, eigval3;
-        t.get_eigenvalues(eigval1, eigval2, eigval3);
+        Eigen::Vector3d colorVector;
+        auto eigvals = t.getEigenvalues();
 
-        if(eigval1 == eigval2 && eigval1 != eigval3){
-          Geometry::Vector eigvec3_norm = t.get_eigenvector3().normal();
-          Geometry::Vector xCross = Cross(eigvec3_norm, Geometry::Vector(1,0,0));
-          Geometry::Vector yCross = Cross(eigvec3_norm, Geometry::Vector(0,1,0));
-          Geometry::Vector zCross = Cross(eigvec3_norm, Geometry::Vector(0,0,1));
-          xCross.normalize();
-          yCross.normalize();
-          zCross.normalize();
+        if(eigvals[0] == eigvals[1] && eigvals[0] != eigvals[2]){
+          auto eigvec3_norm = t.getEigenvector(2);
+          eigvec3_norm /= eigvec3_norm.norm();
+          auto xCross = eigvec3_norm.cross(Eigen::Vector3d({1,0,0}));
+          auto yCross = eigvec3_norm.cross(Eigen::Vector3d({0,1,0}));
+          auto zCross = eigvec3_norm.cross(Eigen::Vector3d({0,0,1}));
+          xCross /= xCross.norm();
+          yCross /= yCross.norm();
+          zCross /= zCross.norm();
 
-          double epsilon = pow(2, -52);
-          if(std::abs(Dot(xCross, yCross)) > (1-epsilon)){
+          const static double epsilon = pow(2, -52);
+          if(std::abs(xCross.dot(yCross)) > (1-epsilon))
             colorVector = xCross;
-          }
-          else if(std::abs(Dot(yCross, zCross)) > (1-epsilon)){
+          else if(std::abs(yCross.dot(zCross)) > (1-epsilon))
             colorVector = yCross;
-          }
-          else if(std::abs(Dot(xCross, zCross)) > (1-epsilon)){
+          else if(std::abs(xCross.dot(zCross)) > (1-epsilon))
             colorVector = zCross;
-          }
-          else{
-            colorVector = t.get_eigenvector1();
-          }
-        } else{
-          colorVector = t.get_eigenvector1();
+          else
+            colorVector = t.getEigenvector(0);
         }
-        colorVector = Abs(colorVector);
-        colorVector.normalize();
-        return colorVector;
+        else
+          colorVector = t.getEigenvector(0);
+        return Abs(Geometry::Vector(colorVector[0], colorVector[1], colorVector[2])).normal();
       }
 
       // Returns color of node
@@ -624,7 +624,7 @@ namespace SCIRun{
       {
         getFieldData(index);
 
-        return pinputTensor.get();
+        return scirunTensorToEigenTensor(pinputTensor.get());
       }
 
       // Get primary field information

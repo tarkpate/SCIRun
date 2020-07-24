@@ -71,7 +71,7 @@ namespace SCIRun{
         Core::Datatypes::ColorRGB defaultColor;
         boost::optional<Core::Datatypes::ColorMapHandle> colorMap;
         Core::Datatypes::ColorMapHandle coordinateMap {nullptr}, textureMap {nullptr};
-        boost::optional<Core::Datatypes::Dyadic3DTensor> pinputTensor, sinputTensor, tinputTensor;
+        boost::optional<Core::Geometry::Tensor> pinputTensor, sinputTensor, tinputTensor;
         boost::optional<Core::Geometry::Vector> pinputVector, sinputVector, tinputVector;
         boost::optional<double> pinputScalar, sinputScalar, tinputScalar;
         double current_index;
@@ -85,7 +85,7 @@ namespace SCIRun{
         Core::Datatypes::ColorRGB getColorMapVal(int index);
 
         // Returns color vector to be used for rgb conversion of tensors
-        Core::Geometry::Vector getTensorColorVector(Core::Datatypes::Dyadic3DTensor& t);
+        Core::Geometry::Vector getTensorColorVector(const Core::Datatypes::Dyadic3DTensor& t);
 
      public:
         ShowFieldGlyphsPortHandler(

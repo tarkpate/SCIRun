@@ -774,7 +774,7 @@ void GlyphBuilder::renderTensors(
     }
     else if(order1Tensor)
     {
-      Vector dir;
+      Eigen::Vector3d dir;
       if(vector_eig[0] && vector_eig[1])
         dir = eigvecs[2] * eigvals[2];
       else if(vector_eig[1] && vector_eig[2])
@@ -783,7 +783,9 @@ void GlyphBuilder::renderTensors(
         dir = eigvecs[1] * eigvals[1];
       // Point p1 = points[i];
       // Point p2 = points[i] + dir;
-      addGlyph(tensor_line_glyphs, RenderState::GlyphType::LINE_GLYPH, points[i], dir, scale, scale, scale, resolution, node_color, true);
+      Vector dirVec = Vector(dir[0], dir[1], dir[2]);
+      addGlyph(tensor_line_glyphs, RenderState::GlyphType::LINE_GLYPH, points[i], dirVec, scale,
+              scale, scale, resolution, node_color, true);
     }
     // Render as order 2 or 3 tensor
     else
