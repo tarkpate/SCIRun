@@ -73,17 +73,17 @@ namespace Graphics {
 
     Core::Geometry::Point evaluateSuperquadricPointLinear(const SuperquadricPointParams& params);
     Core::Geometry::Point evaluateSuperquadricPointPlanar(const SuperquadricPointParams& params);
-    Core::Geometry::Point evaluateSuperquadricPoint(bool linear, const SuperquadricPointParams& params);
+    Core::Geometry::Point evaluateSuperquadricPoint(
+        bool linear, const SuperquadricPointParams& params);
     Core::Geometry::Point evaluateEllipsoidPoint(EllipsoidPointParams& params);
 
     Core::Geometry::Transform getScale();
-    void setTensor(const Core::Datatypes::Dyadic3DTensor &t);
+    void setTensor(const Core::Datatypes::Dyadic3DTensor& t);
     Core::Datatypes::Dyadic3DTensor getTensor() const;
 
    private:
-    void generateBoxSide(GlyphConstructor& constructor, const Core::Geometry::Vector& p1,
-        const Core::Geometry::Vector& p2, const Core::Geometry::Vector& p3,
-        const Core::Geometry::Vector& p4, const Core::Geometry::Vector& normal);
+    void generateBoxSide(GlyphConstructor& constructor,
+        const std::vector<Core::Geometry::Vector>& points, const Core::Geometry::Vector& normal);
     std::vector<Core::Geometry::Vector> generateBoxPoints();
     std::pair<double, double> getAAndB(double emphasis);
     bool isLinear();

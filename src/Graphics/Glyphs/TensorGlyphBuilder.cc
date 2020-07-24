@@ -336,7 +336,7 @@ void TensorGlyphBuilder::generateBox(GlyphConstructor& constructor)
 }
 
 void TensorGlyphBuilder::generateBoxSide(
-    GlyphConstructor& constructor, const std::vector<Point>& points, const Vector& normal)
+    GlyphConstructor& constructor, const std::vector<Vector>& points, const Vector& normal)
 {
   constructor.setOffset();
   for (auto& p : points)

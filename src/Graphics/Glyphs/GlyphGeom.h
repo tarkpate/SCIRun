@@ -36,8 +36,6 @@
 #include <Graphics/Datatypes/GeometryImpl.h>
 #include <Core/Datatypes/Color.h>
 #include <Graphics/Glyphs/GlyphConstructor.h>
-#include <Core/Datatypes/TensorFwd.h>
-
 #include <Graphics/Glyphs/share.h>
 
 namespace SCIRun {
