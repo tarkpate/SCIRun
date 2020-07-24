@@ -497,32 +497,28 @@ namespace SCIRun{
       // Returns color vector for tensor that are using rgb conversion
       Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(const Dyadic3DTensor& t)
       {
-        Eigen::Vector3d colorVector;
+        const static double epsilon = pow(2, -50);
         auto eigvals = t.getEigenvalues();
+        for (auto& e : eigvals)
+          e = std::abs(e);
 
-        if(eigvals[0] == eigvals[1] && eigvals[0] != eigvals[2]){
-          auto eigvec3_norm = t.getEigenvector(2);
-          eigvec3_norm /= eigvec3_norm.norm();
-          auto xCross = eigvec3_norm.cross(Eigen::Vector3d({1,0,0}));
-          auto yCross = eigvec3_norm.cross(Eigen::Vector3d({0,1,0}));
-          auto zCross = eigvec3_norm.cross(Eigen::Vector3d({0,0,1}));
-          xCross /= xCross.norm();
-          yCross /= yCross.norm();
-          zCross /= zCross.norm();
+        std::cout << "before newt\n";
+        std::cout << "eigvecs size " << t.getEigenvectors().size() << "\n";
+        Dyadic3DTensor newT(t.getEigenvectors(), eigvals);
+        std::cout << "after newt\n";
 
-          const static double epsilon = pow(2, -52);
-          if(std::abs(xCross.dot(yCross)) > (1-epsilon))
-            colorVector = xCross;
-          else if(std::abs(yCross.dot(zCross)) > (1-epsilon))
-            colorVector = yCross;
-          else if(std::abs(xCross.dot(zCross)) > (1-epsilon))
-            colorVector = zCross;
-          else
-            colorVector = t.getEigenvector(0);
+        eigvals = newT.getEigenvalues();
+        auto eigvecs = newT.getEigenvectors();
+
+        Eigen::Vector3d colorVector = eigvecs[0];
+        if (std::abs(eigvals[0] - eigvals[1]) < epsilon)
+        {
+          colorVector += eigvecs[1];
+          if (std::abs(eigvals[1] - eigvals[2]) < epsilon)
+            colorVector += eigvecs[2];
         }
-        else
-          colorVector = t.getEigenvector(0);
-        return Abs(Geometry::Vector(colorVector[0], colorVector[1], colorVector[2])).normal();
+        colorVector /= colorVector.norm();
+        return Geometry::Vector(colorVector[0], colorVector[1], colorVector[2]);
       }
 
       // Returns color of node

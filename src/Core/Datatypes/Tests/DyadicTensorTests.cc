@@ -393,9 +393,11 @@ TEST(DyadicTensorTest, SetEigens)
   Dyadic2DTensor t({Eigen::Vector2d({3, 0}), Eigen::Vector2d({0, 6})});
   std::vector<double> eigvals = {3, 4};
   std::vector<Eigen::Vector2d> eigvecs = {Eigen::Vector2d({0, 1}), Eigen::Vector2d({1, 0})};
+  std::vector<double> expectedEigvals = {4, 3};
+  std::vector<Eigen::Vector2d> expectedEigvecs = {Eigen::Vector2d({1, 0}), Eigen::Vector2d({0, 1})};
   t.setEigens(eigvecs, eigvals);
-  ASSERT_EQ(eigvals, t.getEigenvalues());
-  ASSERT_EQ(eigvecs, t.getEigenvectors());
+  ASSERT_EQ(expectedEigvals, t.getEigenvalues());
+  ASSERT_EQ(expectedEigvecs, t.getEigenvectors());
 }
 
 TEST(DyadicTensorTest, SetEigensFail1)

@@ -72,6 +72,13 @@ namespace Core {
         setEigenVectors(eigvecs);
       }
 
+      DyadicTensorGeneric(
+          const std::vector<VectorType>& eigvecs, const std::vector<Number>& eigvals)
+          : parent()
+      {
+        setEigens(eigvecs, eigvals);
+      }
+
       DyadicTensorGeneric(const DyadicTensorGeneric<Number, Dim>& other) : parent()
       {
         for (size_t i = 0; i < Dim; ++i)
@@ -92,8 +99,7 @@ namespace Core {
         haveEigens_ = true;
       }
 
-      DyadicTensorGeneric(const parent& other)
-          : parent()
+      DyadicTensorGeneric(const parent& other) : parent()
       {
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
@@ -269,13 +275,14 @@ namespace Core {
 
       void setEigens(const std::vector<VectorType>& eigvecs, const std::vector<Number>& eigvals)
       {
-        if (eigvecs_.size() != eigvecs.size())
+        if (eigvecs.size() != Dim)
           THROW_INVALID_ARGUMENT("The number of input eigvecs must be " + eigvecs_.size());
-        if (eigvals_.size() != eigvals.size())
+        if (eigvals.size() != Dim)
           THROW_INVALID_ARGUMENT("The number of input eigvals must be " + eigvals_.size());
         eigvecs_ = eigvecs;
         eigvals_ = eigvals;
         haveEigens_ = true;
+        reorderTensorValues();
         setTensorValues();
       }
 

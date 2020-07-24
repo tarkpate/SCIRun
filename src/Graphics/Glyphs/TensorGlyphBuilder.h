@@ -25,64 +25,100 @@
    DEALINGS IN THE SOFTWARE.
 */
 
-
 #ifndef Graphics_Glyphs_TENSOR_GLYPH_BUILDER_H
 #define Graphics_Glyphs_TENSOR_GLYPH_BUILDER_H
 
-#include <Core/GeometryPrimitives/Transform.h>
+#include <Core/Datatypes/Color.h>
 #include <Core/Datatypes/Dyadic3DTensor.h>
 #include <Core/GeometryPrimitives/Point.h>
+#include <Core/GeometryPrimitives/Transform.h>
 #include <Core/GeometryPrimitives/Vector.h>
-#include <Core/Datatypes/Color.h>
 #include <Core/Math/TrigTable.h>
 #include <Graphics/Glyphs/GlyphConstructor.h>
 #include <Graphics/Glyphs/share.h>
 
 namespace SCIRun {
 namespace Graphics {
-class SCISHARE TensorGlyphBuilder
-{
-public:
-  TensorGlyphBuilder(const Core::Datatypes::Dyadic3DTensor& t, const Core::Geometry::Point& center);
-  void scaleTensor(double scale);
-  // void reorderTensorValues(std::vector<Core::Geometry::Vector>& eigvecs, std::vector<double>& eigvals);
-  void makeTensorPositive();
-  void normalizeTensor();
-  void setColor(const Core::Datatypes::ColorRGB& color);
-  void setResolution(double resolution);
-  void generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis);
-  void generateEllipsoid(GlyphConstructor& constructor, bool half);
-  void generateBox(GlyphConstructor& constructor);
+  struct SCISHARE EllipsoidPointParams
+  {
+    double sinPhi;
+    double cosPhi;
+    double sinTheta;
+    double cosTheta;
+  };
 
-private:
-  Core::Geometry::Point evaluateSuperquadricPointLinear(double sinphi, double cosphi, double sintheta,
-                                        double costheta, double A, double B);
-  Core::Geometry::Point evaluateSuperquadricPointPlanar(double sinphi, double cosphi, double sintheta,
-                                        double costheta, double A, double B);
-  Core::Geometry::Point evaluateEllipsoidPoint(double sinphi, double cosphi, double sintheta, double costheta);
-  Core::Geometry::Point evaluateSuperquadricPoint(bool linear, double sinPhi, double cosPhi, double sinTheta,
-                                  double cosTheta, double A, double B);
-  void generateBoxSide(GlyphConstructor& constructor, const Core::Geometry::Vector& p1, const Core::Geometry::Vector& p2,
-                       const Core::Geometry::Vector& p3, const Core::Geometry::Vector& p4,
-                       const Core::Geometry::Vector& normal);
-  std::vector<Core::Geometry::Vector> generateBoxPoints();
-  void computeTransforms();
-  void postScaleTransorms();
-  void computeSinCosTable(bool half);
+  struct SCISHARE SuperquadricPointParams
+  {
+    double sinPhi;
+    double cosPhi;
+    double sinTheta;
+    double cosTheta;
+    double A;
+    double B;
+  };
 
-  const static int DIMENSIONS_ = 3;
-  const static int BOX_FACE_POINTS_ = 4;
-  Core::Datatypes::Dyadic3DTensor t_;
-  Core::Geometry::Point center_;
-  Core::Geometry::Transform trans_, rotate_;
-  Core::Datatypes::ColorRGB color_ = {1.0, 1.0, 1.0};
-  int resolution_ = 10;
-  bool flatTensor_ = false;
-  Core::Geometry::Vector zeroNorm_ = {0, 0, 0};
-  SinCosTable tab1_, tab2_;
-  int nv_ = 0;
-  int nu_ = 0;
-};
-}}
+  class SCISHARE TensorGlyphBuilder
+  {
+   public:
+    TensorGlyphBuilder(
+        const Core::Datatypes::Dyadic3DTensor& t, const Core::Geometry::Point& center);
+    void scaleTensor(double scale);
+    // void reorderTensorValues(std::vector<Core::Geometry::Vector>& eigvecs, std::vector<double>&
+    // eigvals);
+    void makeTensorPositive(bool reorder = false, bool makeGlyph = true);
+    void normalizeTensor();
+    void setColor(const Core::Datatypes::ColorRGB& color);
+    void setResolution(double resolution);
+    void generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis);
+    void generateEllipsoid(GlyphConstructor& constructor, bool half);
+    void generateBox(GlyphConstructor& constructor);
+
+    Core::Geometry::Point evaluateSuperquadricPointLinear(const SuperquadricPointParams& params);
+    Core::Geometry::Point evaluateSuperquadricPointPlanar(const SuperquadricPointParams& params);
+    Core::Geometry::Point evaluateSuperquadricPoint(bool linear, const SuperquadricPointParams& params);
+    Core::Geometry::Point evaluateEllipsoidPoint(EllipsoidPointParams& params);
+
+    void computeTransforms();
+    void computeSinCosTable(bool half);
+    void postScaleTransorms();
+    Core::Geometry::Transform getTrans();
+    Core::Geometry::Transform getRotate();
+    Core::Geometry::Transform getScale();
+    bool isLinear();
+    void computeAAndB(double emphasis);
+    double getA();
+    double getB();
+    double computeSinPhi(int v);
+    double computeCosPhi(int v);
+    double computeSinTheta(int u);
+    double computeCosTheta(int u);
+    void setTensor(const Core::Datatypes::Dyadic3DTensor &t);
+    Core::Datatypes::Dyadic3DTensor getTensor() const;
+    std::vector<Core::Geometry::Vector> getEigenVectors();
+    std::vector<double> getEigenValues();
+
+   private:
+    void generateBoxSide(GlyphConstructor& constructor, const Core::Geometry::Vector& p1,
+        const Core::Geometry::Vector& p2, const Core::Geometry::Vector& p3,
+        const Core::Geometry::Vector& p4, const Core::Geometry::Vector& normal);
+    std::vector<Core::Geometry::Vector> generateBoxPoints();
+
+    const static int DIMENSIONS_ = 3;
+    const static int BOX_FACE_POINTS_ = 4;
+    Core::Datatypes::Dyadic3DTensor t_;
+    Core::Geometry::Point center_;
+    Core::Geometry::Transform trans_, rotate_;
+    Core::Datatypes::ColorRGB color_ = {1.0, 1.0, 1.0};
+    int resolution_ = 10;
+    bool flatTensor_ = false;
+    Core::Geometry::Vector zeroNorm_ = {0, 0, 0};
+    SinCosTable tab1_, tab2_;
+    int nv_ = 0;
+    int nu_ = 0;
+    double cl_, cp_;
+    double A_, B_;
+  };
+}
+}
 
 #endif
