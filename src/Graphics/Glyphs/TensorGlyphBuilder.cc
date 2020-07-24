@@ -157,13 +157,8 @@ void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool h
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
-    double sinPhi[2];
-    sinPhi[0] = tab2_.sin(v + 1);
-    sinPhi[1] = tab2_.sin(v);
-
-    double cosPhi[2];
-    cosPhi[0] = tab2_.cos(v + 1);
-    cosPhi[1] = tab2_.cos(v);
+    double sinPhi[2] = {tab2_.sin(v), tab2_.sin(v + 1)};
+    double cosPhi[2] = {tab2_.cos(v), tab2_.cos(v + 1)};
 
     for (int u = 0; u < nu_; ++u)
     {
@@ -219,43 +214,14 @@ bool TensorGlyphBuilder::isLinear()
   return cl_ >= cp_;
 }
 
-void TensorGlyphBuilder::computeAAndB(double emphasis)
+std::pair<double, double> TensorGlyphBuilder::getAAndB(double emphasis)
 {
-  bool linear = isLinear();
   double pPower = GlyphGeomUtility::spow((1.0 - cp_), emphasis);
   double lPower = GlyphGeomUtility::spow((1.0 - cl_), emphasis);
-  A_ = linear ? pPower : lPower;
-  B_ = linear ? lPower : pPower;
-}
-
-double TensorGlyphBuilder::getA()
-{
-  return A_;
-}
-
-double TensorGlyphBuilder::getB()
-{
-  return B_;
-}
-
-double TensorGlyphBuilder::computeSinPhi(int v)
-{
-  return tab2_.sin(v);
-}
-
-double TensorGlyphBuilder::computeCosPhi(int v)
-{
-  return tab2_.cos(v);
-}
-
-double TensorGlyphBuilder::computeSinTheta(int u)
-{
-  return tab1_.sin(u);
-}
-
-double TensorGlyphBuilder::computeCosTheta(int u)
-{
-  return tab1_.cos(u);
+  if (isLinear())
+    return std::make_pair(pPower, lPower);
+  else
+    return std::make_pair(lPower, pPower);
 }
 
 void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis)
@@ -266,24 +232,19 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   computeSinCosTable(false);
 
   bool linear = isLinear();
-  computeAAndB(emphasis);
+  auto AAndB = getAAndB(emphasis);
   SuperquadricPointParams params;
-  params.A = A_;
-  params.B = B_;
+  params.A = AAndB.first;
+  params.B = AAndB.second;
 
   SuperquadricPointParams normalParams;
-  normalParams.A = 2.0 - A_;
-  normalParams.B = 2.0 - B_;
+  normalParams.A = 2.0 - params.A;
+  normalParams.B = 2.0 - params.B;
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
-    double sinPhi[2];
-    sinPhi[0] = tab2_.sin(v);
-    sinPhi[1] = tab2_.sin(v + 1);
-
-    double cosPhi[2];
-    cosPhi[0] = tab2_.cos(v);
-    cosPhi[1] = tab2_.cos(v + 1);
+    double sinPhi[2] = {tab2_.sin(v), tab2_.sin(v + 1)};
+    double cosPhi[2] = {tab2_.cos(v), tab2_.cos(v + 1)};
 
     for (int u = 0; u < nu_; ++u)
     {
@@ -360,34 +321,26 @@ void TensorGlyphBuilder::generateBox(GlyphConstructor& constructor)
 {
   computeTransforms();
 
-  std::vector<Vector> box_points = generateBoxPoints();
+  std::vector<Vector> points = generateBoxPoints();
   std::vector<Vector> normals = rotate_.get_rotation();
   if (flatTensor_)
     for (int d = 0; d < DIMENSIONS_; ++d)
       normals[d] = zeroNorm_;
 
-  generateBoxSide(
-      constructor, box_points[5], box_points[4], box_points[7], box_points[6], normals[0]);
-  generateBoxSide(
-      constructor, box_points[7], box_points[6], box_points[3], box_points[2], normals[1]);
-  generateBoxSide(
-      constructor, box_points[1], box_points[5], box_points[3], box_points[7], normals[2]);
-  generateBoxSide(
-      constructor, box_points[3], box_points[2], box_points[1], box_points[0], -normals[0]);
-  generateBoxSide(
-      constructor, box_points[1], box_points[0], box_points[5], box_points[4], -normals[1]);
-  generateBoxSide(
-      constructor, box_points[2], box_points[6], box_points[0], box_points[4], -normals[2]);
+  generateBoxSide(constructor, {points[5], points[4], points[7], points[6]}, normals[0]);
+  generateBoxSide(constructor, {points[7], points[6], points[3], points[2]}, normals[1]);
+  generateBoxSide(constructor, {points[1], points[5], points[3], points[7]}, normals[2]);
+  generateBoxSide(constructor, {points[3], points[2], points[1], points[0]}, -normals[0]);
+  generateBoxSide(constructor, {points[1], points[0], points[5], points[4]}, -normals[1]);
+  generateBoxSide(constructor, {points[2], points[6], points[0], points[4]}, -normals[2]);
 }
 
-void TensorGlyphBuilder::generateBoxSide(GlyphConstructor& constructor, const Vector& p1,
-    const Vector& p2, const Vector& p3, const Vector& p4, const Vector& normal)
+void TensorGlyphBuilder::generateBoxSide(
+    GlyphConstructor& constructor, const std::vector<Point>& points, const Vector& normal)
 {
   constructor.setOffset();
-  constructor.addVertex(p1, normal, color_);
-  constructor.addVertex(p2, normal, color_);
-  constructor.addVertex(p3, normal, color_);
-  constructor.addVertex(p4, normal, color_);
+  for (auto& p : points)
+    constructor.addVertex(p, normal, color_);
   constructor.addIndicesToOffset(2, 0, 3);
   constructor.addIndicesToOffset(1, 3, 0);
 }
@@ -403,16 +356,6 @@ std::vector<Vector> TensorGlyphBuilder::generateBoxPoints()
         boxPoints.emplace_back(trans_ * Point(x * eigvals[0], y * eigvals[1], z * eigvals[2]));
 
   return boxPoints;
-}
-
-Transform TensorGlyphBuilder::getTrans()
-{
-  return trans_;
-}
-
-Transform TensorGlyphBuilder::getRotate()
-{
-  return rotate_;
 }
 
 Transform TensorGlyphBuilder::getScale()
