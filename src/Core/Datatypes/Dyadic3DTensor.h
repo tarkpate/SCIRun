@@ -54,17 +54,14 @@ namespace Core {
         parent::setEigenVectors(eigvecs);
       }
 
-      Dyadic3DTensorGeneric(const Dyadic3DTensorGeneric<Number>& other)
-        : parent()
+      Dyadic3DTensorGeneric(const Dyadic3DTensorGeneric<Number>& other) : parent()
       {
         for (size_t i = 0; i < DIM_; ++i)
           for (size_t j = 0; j < DIM_; ++j)
             (*this)(i, j) = other(i, j);
       }
 
-      Dyadic3DTensorGeneric(const parent& other)
-        : parent(other)
-      {}
+      Dyadic3DTensorGeneric(const parent& other) : parent(other) {}
 
       Dyadic3DTensorGeneric(
           const VectorType& eigvec0, const VectorType& eigvec1, const VectorType& eigvec2)
@@ -102,7 +99,7 @@ namespace Core {
         return 3.0 * eigvals[2] / parent::eigenValueSum();
       }
 
-      VectorType mandel()
+      Eigen::Matrix<Number, 6, 1> mandel()
       {
         auto eigvals = parent::getEigenvalues();
         auto eigvecs = parent::getEigenvectors();
@@ -111,8 +108,9 @@ namespace Core {
           eigvecs[i] *= eigvals[i];
 
         static const double sqrt2 = std::sqrt(2);
-        VectorType mandel({eigvecs[0][0], eigvecs[1][1], eigvecs[2][2], eigvecs[0][1] * sqrt2,
-            eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2});
+        Eigen::Matrix<Number, 6, 1> mandel;
+        mandel << eigvecs[0][0], eigvecs[1][1], eigvecs[2][2], eigvecs[0][1] * sqrt2,
+            eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2;
         return mandel;
       }
 
@@ -126,6 +124,57 @@ namespace Core {
       {
         parent::operator=(static_cast<parent>(other));
         return *this;
+      }
+
+      template <typename OtherDerived>
+      Dyadic3DTensorGeneric<Number> operator*(const OtherDerived& other) const
+      {
+        Dyadic3DTensorGeneric<Number> newTensor(parent::operator*(other));
+        return newTensor;
+      }
+
+      template <typename OtherDerived>
+      Dyadic3DTensorGeneric<Number> operator+(const OtherDerived& other) const
+      {
+        Dyadic3DTensorGeneric<Number> newTensor(parent::operator+(other));
+        return newTensor;
+      }
+
+      template <typename OtherDerived>
+      Dyadic3DTensorGeneric<Number> operator-(const OtherDerived& other) const
+      {
+        Dyadic3DTensorGeneric<Number> newTensor(parent::operator-(other));
+        return newTensor;
+      }
+
+      void makePositive(bool reorder, bool makeGlyph)
+      {
+        static const double zeroThreshold = 0.000001;
+
+        auto eigvals = parent::getEigenvalues();
+        auto eigvecs = parent::getEigenvectors();
+        for (auto& e : eigvals)
+        {
+          e = std::abs(e);
+          if (e <= zeroThreshold) e = 0;
+        }
+
+        if (makeGlyph)
+        {
+          auto cross = eigvecs[0].cross(eigvecs[1]);
+          if (cross.dot(eigvecs[2]) < 2e-12) eigvecs[2] = cross;
+        }
+
+        for (int d = 0; d < DIM_; ++d)
+          if (eigvals[d] == 0)
+          {
+            auto cross = eigvecs[(d + 1) % DIM_].cross(eigvecs[(d + 2) % DIM_]);
+            cross /= cross.norm();
+            eigvecs[d] = cross;
+            break;
+          }
+
+        parent::setEigens(eigvecs, eigvals);
       }
 
      private:

@@ -35,9 +35,212 @@ using namespace Graphics;
 using namespace Core::Geometry;
 using namespace Core::Datatypes;
 
+using GGU = GlyphGeomUtility;
+
 Vector makeSCIRunVector(const Eigen::Vector3d& vec)
 {
   return Vector(vec[0], vec[1], vec[2]);
+}
+
+UncertaintyTensorOffsetSurfaceBuilder::UncertaintyTensorOffsetSurfaceBuilder(
+    const Core::Datatypes::Dyadic3DTensor& t, const Core::Geometry::Point& center, double emphasis)
+    : TensorGlyphBuilder(t, center), emphasis_(emphasis)
+{}
+
+void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
+    GlyphConstructor& constructor, const Eigen::Matrix<double, 6, 6>& covarianceMatrix)
+{
+  const static double h = 0.000001;
+  const static double hHalf = 0.5 * h;
+  Point origin = Point(0, 0, 0);
+
+  t_.makePositive(true, false);
+  computeTransforms();
+  postScaleTransorms();
+  computeSinCosTable(false);
+
+  auto eigvecs = t_.getEigenvectors();
+  auto eigvals = t_.getEigenvalues();
+  auto cross = eigvecs[0].cross(eigvecs[1]);
+  bool flipVertices = cross.dot(eigvecs[2]) < 2e-12;
+
+  MandelVector tMandel = t_.mandel();
+
+  const Transform rotate = Transform(Point(0, 0, 0), makeSCIRunVector(eigvecs[0]),
+      makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]));
+  Transform scale;
+  auto eigvalsVector = Vector(eigvals[0], eigvals[1], eigvals[2]);
+  scale.post_scale(eigvalsVector);
+  const Transform scaleThenRotate = rotate * scale;
+  Transform rotateInv = rotate;
+  rotateInv.invert();
+
+  bool linear = t_.linearCertainty() > t_.planarCertainty();
+  auto AAndB = getAAndB(linear, emphasis_);
+  SuperquadricPointParams params;
+  params.A = AAndB.first;
+  params.B = AAndB.second;
+
+  SuperquadricPointParams normalParams;
+  normalParams.A = 2.0 - params.A;
+  normalParams.B = 2.0 - params.B;
+
+  MandelVector finiteDiff;
+  finiteDiff.fill(0.0);
+
+  int nv = resolution_;
+  int nu = resolution_ + 1;
+  for (int v = 0; v < nv - 1; v++)
+  {
+    double sinPhi[2] = {tab2_.sin(v), tab2_.sin(v + 1)};
+    double cosPhi[2] = {tab2_.cos(v), tab2_.cos(v + 1)};
+
+    for (int u = 0; u < nu; u++)
+    {
+      constructor.setOffset();
+      params.sinTheta = normalParams.sinTheta = tab1_.sin(u);
+      params.cosTheta = normalParams.cosTheta = tab1_.cos(u);
+
+      for (int i = 0; i < 2; ++i)
+      {
+        params.sinPhi = normalParams.sinPhi = sinPhi[i];
+        params.cosPhi = normalParams.cosPhi = cosPhi[i];
+
+        Vector p = scaleThenRotate * Vector(evaluateSuperquadricPoint(linear, params));
+        auto pseudoInv = t_.getEigenvalues();
+        Vector pseudoInvVector;
+        for (int i = 0; i < 3; ++i)
+          pseudoInvVector[i] = 1 / pseudoInv[i];
+        // pseudoInv /= meanTensors_[f].magnitude();
+
+        // Surface Derivative
+        Eigen::Vector3d nn;
+        nn.fill(0.0);
+        Vector diff = Vector(0.0, 0.0, 0.0);
+        for (int j = 0; j < 3; ++j)
+        {
+          diff[j] = hHalf;
+          Point newP = Point(pseudoInvVector * (rotateInv * (p + diff)));
+          double d1 = evaluateSuperquadricImpl(linear, newP, params.A, params.B);
+
+          newP = Point(pseudoInvVector * (rotateInv * (p - diff)));
+          double d2 = evaluateSuperquadricImpl(linear, newP, params.A, params.B);
+          diff[j] = 0.0;
+          nn(j) = (d1 - d2) / h;
+        }
+
+        MandelVector qn;
+        qn.fill(0.0);
+        // Vector pNorm = rotate * Vector(builder.evaluateSuperquadricPoint(linear, params));
+        for (int j = 0; j < 6; ++j)
+        {
+          finiteDiff(j) = hHalf;
+          qn(j) = diffT(tMandel + finiteDiff, tMandel - finiteDiff, Point(p));
+          finiteDiff(j) = 0.0;
+        }
+        qn /= h;
+        qn /= nn.norm();
+
+        double q = std::sqrt(
+            std::abs((qn.transpose().eval() * (covarianceMatrix * qn).eval()).eval().value()));
+        auto n = nn / nn.norm();
+        Vector nVector = Vector(n(0), n(1), n(2));
+
+        Vector normal = Vector(evaluateSuperquadricPoint(linear, normalParams));
+        normal = rotate * normal;
+        normal.safe_normalize();
+
+        Vector offsetP = p + q * normal;
+
+        constructor.addVertex(offsetP + Vector(center_), nVector, ColorRGB(1.0, 1.0, 1.0));
+      }
+
+      if (flipVertices)
+      {
+        constructor.addIndicesToOffset(0, 2, 1);
+        constructor.addIndicesToOffset(2, 3, 1);
+      }
+      else
+      {
+        constructor.addIndicesToOffset(0, 1, 2);
+        constructor.addIndicesToOffset(2, 1, 3);
+      }
+    }
+  }
+  constructor.popIndicesNTimes(6);
+}
+
+double UncertaintyTensorOffsetSurfaceBuilder::diffT(
+    const MandelVector& t1, const MandelVector& t2, const Point& p)
+{
+  std::vector<double> dist(2);
+  for (int i = 0; i < 2; ++i)
+  {
+    const MandelVector& tMandel = (i == 0) ? t1 : t2;
+
+    auto t = symmetricTensorFromMandel(tMandel);
+    t.makePositive(true, false);
+    bool linear = t.linearCertainty() > t.planarCertainty();
+    auto eigvecs = t.getEigenvectors();
+
+    // newBuilder.computeTransforms();
+    // newBuilder.postScaleTransorms();
+    TensorGlyphBuilder builder(t, p);
+    auto AAndB = builder.getAAndB(linear, emphasis_);
+    double A = AAndB.first;
+    double B = AAndB.second;
+    const Transform rotate = Transform(Point(0, 0, 0), makeSCIRunVector(eigvecs[0]),
+        makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]));
+    Transform scale;
+    auto eigvals = t.getEigenvalues();
+    auto eigvalsVector = Vector(eigvals[0], eigvals[1], eigvals[2]);
+    scale.post_scale(eigvalsVector);
+    auto rotateInv = rotate;
+    rotateInv.invert();
+    auto scaleInv = scale;
+    scaleInv.invert();
+
+    // auto t = newBuilder.getTensor();
+    Vector pseudoInv = eigvalsVector;
+    for (int i = 0; i < 3; ++i)
+      pseudoInv[i] = 1 / pseudoInv[i];
+
+    Vector newP = (pseudoInv * Vector(rotateInv * p));
+    dist[i] = evaluateSuperquadricImpl(linear, Point(newP), A, B);
+  }
+
+  return dist[0] - dist[1];
+}
+
+double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImpl(
+    bool linear, const Point& p, double A, double B)
+{
+  if (linear)
+    return evaluateSuperquadricImplLinear(p, A, B);
+  else
+    return evaluateSuperquadricImplPlanar(p, A, B);
+}
+
+// Generate around x-axis
+double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImplLinear(
+    const Point& p, double A, double B)
+{
+  double twoDivA = 2.0 / A;
+  double twoDivB = 2.0 / B;
+  return GGU::spow(
+             GGU::spow(std::abs(p.y()), twoDivA) + GGU::spow(std::abs(p.z()), twoDivA), A / B) +
+         GGU::spow(std::abs(p.x()), twoDivB) - 1;
+}
+
+// Generate around z-axis
+double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImplPlanar(
+    const Point& p, double A, double B)
+{
+  double twoDivA = 2.0 / A;
+  double twoDivB = 2.0 / B;
+  return GGU::spow(
+             GGU::spow(std::abs(p.x()), twoDivA) + GGU::spow(std::abs(p.y()), twoDivA), A / B) +
+         GGU::spow(std::abs(p.z()), twoDivB) - 1;
 }
 
 TensorGlyphBuilder::TensorGlyphBuilder(const Dyadic3DTensor& t, const Point& center)
@@ -80,36 +283,12 @@ void TensorGlyphBuilder::setResolution(double resolution)
 
 void TensorGlyphBuilder::makeTensorPositive(bool reorder, bool makeGlyph)
 {
-  static const double zeroThreshold = 0.000001;
+  t_.makePositive(reorder, makeGlyph);
 
   auto eigvals = t_.getEigenvalues();
-  auto eigvecs = t_.getEigenvectors();
-  for (auto& e : eigvals)
-  {
-    e = fabs(e);
-    if (e <= zeroThreshold) e = 0;
-  }
-
   // These are exactly zero after thresholding
-  flatTensor_ = eigvals[0] == 0 || eigvals[1] == 0 || eigvals[2] == 0;
-
-  if (makeGlyph)
-  {
-    auto cross = eigvecs[0].cross(eigvecs[1]);
-    if (cross.dot(eigvecs[2]) < 2e-12) eigvecs[2] = cross;
-  }
-
-  for (int d = 0; d < DIMENSIONS_; ++d)
-    if (eigvals[d] == 0)
-    {
-      auto cross = eigvecs[(d + 1) % DIMENSIONS_].cross(eigvecs[(d + 2) % DIMENSIONS_]);
-      cross /= cross.norm();
-      eigvecs[d] = cross;
-      zeroNorm_ = makeSCIRunVector(cross);
-      break;
-    }
-
-  t_.setEigens(eigvecs, eigvals);
+  flatTensor_ = eigvals[0] != 0 || eigvals[1] != 0 || eigvals[2] == 0;
+  zeroNorm_ = makeSCIRunVector(t_.getEigenvector(2));
 }
 
 void TensorGlyphBuilder::computeSinCosTable(bool half)
@@ -207,18 +386,11 @@ Point TensorGlyphBuilder::evaluateEllipsoidPoint(EllipsoidPointParams& params)
   return Point(x, y, z);
 }
 
-bool TensorGlyphBuilder::isLinear()
+std::pair<double, double> TensorGlyphBuilder::getAAndB(bool linear, double emphasis)
 {
-  cl_ = t_.linearCertainty();
-  cp_ = t_.planarCertainty();
-  return cl_ >= cp_;
-}
-
-std::pair<double, double> TensorGlyphBuilder::getAAndB(double emphasis)
-{
-  double pPower = GlyphGeomUtility::spow((1.0 - cp_), emphasis);
-  double lPower = GlyphGeomUtility::spow((1.0 - cl_), emphasis);
-  if (isLinear())
+  double pPower = GlyphGeomUtility::spow((1.0 - t_.planarCertainty()), emphasis);
+  double lPower = GlyphGeomUtility::spow((1.0 - t_.linearCertainty()), emphasis);
+  if (linear)
     return std::make_pair(pPower, lPower);
   else
     return std::make_pair(lPower, pPower);
@@ -231,8 +403,8 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   postScaleTransorms();
   computeSinCosTable(false);
 
-  bool linear = isLinear();
-  auto AAndB = getAAndB(emphasis);
+  bool linear = t_.linearCertainty() > t_.planarCertainty();
+  auto AAndB = getAAndB(linear, emphasis);
   SuperquadricPointParams params;
   params.A = AAndB.first;
   params.B = AAndB.second;

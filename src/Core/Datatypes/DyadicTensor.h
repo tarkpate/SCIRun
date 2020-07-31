@@ -156,6 +156,13 @@ namespace Core {
       }
 
       template <typename OtherDerived>
+      DyadicTensorGeneric<Number, Dim> operator/(const OtherDerived& other) const
+      {
+        DyadicTensorGeneric<Number, Dim> newTensor(parent::operator/(other));
+        return newTensor;
+      }
+
+      template <typename OtherDerived>
       DyadicTensorGeneric<Number, Dim> operator+(const OtherDerived& other) const
       {
         DyadicTensorGeneric<Number, Dim> newTensor(parent::operator+(other));

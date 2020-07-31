@@ -80,13 +80,14 @@ namespace Graphics {
     Core::Geometry::Transform getScale();
     void setTensor(const Core::Datatypes::Dyadic3DTensor& t);
     Core::Datatypes::Dyadic3DTensor getTensor() const;
+    std::pair<double, double> getAAndB(bool linear, double emphasis);
 
    private:
     void generateBoxSide(GlyphConstructor& constructor,
         const std::vector<Core::Geometry::Vector>& points, const Core::Geometry::Vector& normal);
     std::vector<Core::Geometry::Vector> generateBoxPoints();
-    std::pair<double, double> getAAndB(double emphasis);
-    bool isLinear();
+
+   protected:
     void computeSinCosTable(bool half);
     void computeTransforms();
     void postScaleTransorms();
@@ -104,6 +105,26 @@ namespace Graphics {
     int nv_ = 0;
     int nu_ = 0;
     double cl_, cp_;
+  };
+
+  class SCISHARE UncertaintyTensorOffsetSurfaceBuilder : public TensorGlyphBuilder
+  {
+    using MandelVector = Eigen::Matrix<double, 6, 1>;
+
+   public:
+    UncertaintyTensorOffsetSurfaceBuilder(const Core::Datatypes::Dyadic3DTensor& t,
+        const Core::Geometry::Point& center, double emphasis);
+    void generateOffsetSurface(
+        GlyphConstructor& constructor, const Eigen::Matrix<double, 6, 6>& covarianceMatrix);
+    double diffT(const MandelVector& t1, const MandelVector& t2, const Core::Geometry::Point& p);
+
+   private:
+    double evaluateSuperquadricImpl(
+        bool linear, const Core::Geometry::Point& p, double A, double B);
+
+    double evaluateSuperquadricImplLinear(const Core::Geometry::Point& p, double A, double B);
+    double evaluateSuperquadricImplPlanar(const Core::Geometry::Point& p, double A, double B);
+    double emphasis_ = 0.0;
   };
 }
 }
