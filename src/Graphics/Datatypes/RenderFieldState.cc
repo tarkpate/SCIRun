@@ -25,41 +25,27 @@
    DEALINGS IN THE SOFTWARE.
 */
 
-
-#ifndef INTERFACE_MODULES_RENDER_ES_COMP_SR_RENDER_STATE_H
-#define INTERFACE_MODULES_RENDER_ES_COMP_SR_RENDER_STATE_H
-
-#include <gl-shaders/GLShader.hpp>
-#include <es-cereal/ComponentSerialize.hpp>
-#include <es-render/util/Shader.hpp>
-#include <es-render/comp/StaticVBOMan.hpp>
 #include <Graphics/Datatypes/RenderFieldState.h>
-#include <Core/Datatypes/Geometry.h>
 
-namespace SCIRun {
-namespace Render {
+using namespace SCIRun;
 
-/// \todo Transition this class to use the template ShaderVBOAttribs class
-///       under utils (utils/Shader.hpp).
-struct SRRenderState
+RenderState::RenderState()
 {
-  // -- Data --
-  RenderState state;
-
-  // -- Functions --
-  SRRenderState() {}
-
-  static const char* getName() {return "SRRenderState";}
-
-  bool serialize(spire::ComponentSerialize& /* s */, uint64_t /* entityID */)
+  for (int i = 0; i < MAX_ACTION_FLAGS; ++i)
   {
-    // Shouldn't need to serialize these values. They are context specific.
-    // Maybe? Will need to figure out as I go along.
-    return true;
+    mFlags[i] = false;
   }
-};
 
-} // namespace Render
-} // namespace SCIRun
+  // Default settings.
+  mFlags[USE_NORMALS] = true;
+}
 
-#endif
+void RenderState::set(ActionFlags flag, bool truth)
+{
+  mFlags[flag] = truth;
+}
+
+bool RenderState::get(ActionFlags flag) const
+{
+  return mFlags[flag];
+}

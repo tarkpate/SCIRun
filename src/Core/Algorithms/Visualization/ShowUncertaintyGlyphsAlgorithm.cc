@@ -166,6 +166,7 @@ void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
   {
     UncertaintyTensorOffsetSurfaceBuilder builder(meanTensors_[f], points_[0][f], emphasis_);
     builder.generateOffsetSurface(constructor_, covarianceMatrices_[f]);
+    std::cout << "offset " << f << " gen'd\n";
   }
 }
 

@@ -73,7 +73,6 @@ TARGET_LINK_LIBRARIES(Modules_Legacy_Visualization
   #Dataflow_TkExtensions
   Core_Algorithms_Legacy_Fields
   Algorithms_Base
-  #Core_Algorithms_Visualization
   #Core_Algorithms_Geometry
   #Core_Algorithms_Converter
   Core_Basis

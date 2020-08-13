@@ -34,7 +34,6 @@ SET(Algorithms_Visualization_SRCS
 
 SET(Algorithms_Visualization_HEADERS
   DataConversions.h
-  RenderFieldState.h
   OsprayDataAlgorithm.h
   ShowUncertaintyGlyphsAlgorithm.h
 )
@@ -47,6 +46,8 @@ SCIRUN_ADD_LIBRARY(Core_Algorithms_Visualization
 TARGET_LINK_LIBRARIES(Core_Algorithms_Visualization
   Core_Datatypes
   Core_Datatypes_Legacy_Field
+  Graphics_Glyphs
+  Graphics_Datatypes
   Algorithms_Base
   ${SCI_BOOST_LIBRARY}
 )

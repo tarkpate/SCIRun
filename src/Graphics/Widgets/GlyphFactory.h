@@ -29,6 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef Graphics_Graphics_Widgets_GlyphFactory_H
 #define Graphics_Graphics_Widgets_GlyphFactory_H
 
+#include <Graphics/Datatypes/RenderFieldState.h>
 #include <Graphics/Widgets/WidgetParameters.h>
 #include <Graphics/Widgets/share.h>
 

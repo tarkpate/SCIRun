@@ -122,6 +122,7 @@ TEST(DyadicTensorTest, MoveConstructor)
 {
   Dyadic3DTensor t(getEigvecs());
   Dyadic3DTensor t2(std::move(t));
+  t(0,0) = 3.411;
   std::stringstream ss;
   ss << t2;
   ASSERT_EQ(eigvecsString, ss.str());

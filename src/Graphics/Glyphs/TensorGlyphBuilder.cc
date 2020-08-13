@@ -286,8 +286,8 @@ void TensorGlyphBuilder::makeTensorPositive(bool reorder, bool makeGlyph)
   t_.makePositive(reorder, makeGlyph);
 
   auto eigvals = t_.getEigenvalues();
-  // These are exactly zero after thresholding
-  flatTensor_ = eigvals[0] != 0 || eigvals[1] != 0 || eigvals[2] == 0;
+  // This is exactly zero after thresholding
+  flatTensor_ = t_.getEigenvalue(2) == 0;
   zeroNorm_ = makeSCIRunVector(t_.getEigenvector(2));
 }
 
@@ -336,8 +336,8 @@ void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool h
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
-    double sinPhi[2] = {tab2_.sin(v), tab2_.sin(v + 1)};
-    double cosPhi[2] = {tab2_.cos(v), tab2_.cos(v + 1)};
+    double sinPhi[2] = {tab2_.sin(v + 1), tab2_.sin(v)};
+    double cosPhi[2] = {tab2_.cos(v + 1), tab2_.cos(v)};
 
     for (int u = 0; u < nu_; ++u)
     {
@@ -491,13 +491,19 @@ Point TensorGlyphBuilder::evaluateSuperquadricPointPlanar(const SuperquadricPoin
 
 void TensorGlyphBuilder::generateBox(GlyphConstructor& constructor)
 {
+  makeTensorPositive(true);
   computeTransforms();
 
   std::vector<Vector> points = generateBoxPoints();
   std::vector<Vector> normals = rotate_.get_rotation();
-  if (flatTensor_)
+  std::cout << "normals\n";
+  for (auto& v : normals)
+    std::cout << v << "\n";
+  if (flatTensor_) {
+    std::cout << "is flat!\n";
     for (int d = 0; d < DIMENSIONS_; ++d)
       normals[d] = zeroNorm_;
+  }
 
   generateBoxSide(constructor, {points[5], points[4], points[7], points[6]}, normals[0]);
   generateBoxSide(constructor, {points[7], points[6], points[3], points[2]}, normals[1]);

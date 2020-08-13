@@ -29,12 +29,12 @@
 #ifndef Graphics_Glyphs_GLYPH_CONSTRUCTOR_H
 #define Graphics_Glyphs_GLYPH_CONSTRUCTOR_H
 
-#include <Core/GeometryPrimitives/Vector.h>
-#include <Core/GeometryPrimitives/GeomFwd.h>
-#include <Graphics/Datatypes/GeometryImpl.h>
 #include <Core/Datatypes/Color.h>
 #include <Core/Datatypes/ColorMap.h>
+#include <Core/GeometryPrimitives/GeomFwd.h>
+#include <Core/GeometryPrimitives/Vector.h>
 #include <Core/Math/TrigTable.h>
+#include <Graphics/Datatypes/GeometryImpl.h>
 #include <Graphics/Glyphs/share.h>
 
 namespace SCIRun {

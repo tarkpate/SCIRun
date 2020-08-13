@@ -28,6 +28,7 @@
 #ifndef CORE_DATATYPES_DYADIC_TENSOR_H
 #define CORE_DATATYPES_DYADIC_TENSOR_H
 
+#include <iostream>
 #include <Core/Datatypes/TensorBase.h>
 #include <Core/Datatypes/TensorFwd.h>
 #include <Core/Utils/Exception.h>
@@ -91,8 +92,10 @@ namespace Core {
 
       DyadicTensorGeneric(DyadicTensorGeneric<Number, Dim>&& other) : parent()
       {
-        auto otherData = other.data();
-        std::move(otherData, otherData + other.size(), this->data());
+        // std::cout << "this " << this->data();
+        // std::cout << "other " << other.data();
+        // this->m_storage = std::move(other.m_storage);
+        // std::cout << "this " << this->data();
 
         eigvecs_ = std::move(other.eigvecs_);
         eigvals_ = std::move(other.eigvals_);
@@ -208,6 +211,12 @@ namespace Core {
       {
         if (!haveEigens_) buildEigens();
         return eigvecs_;
+      }
+
+      Number getEigenvalue(int index) const
+      {
+        if (!haveEigens_) buildEigens();
+        return eigvals_[index];
       }
 
       std::vector<Number> getEigenvalues() const

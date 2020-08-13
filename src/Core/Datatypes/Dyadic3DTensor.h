@@ -61,6 +61,14 @@ namespace Core {
             (*this)(i, j) = other(i, j);
       }
 
+      Dyadic3DTensorGeneric(const Dyadic3DTensorGeneric<Number>&& other) : parent()
+      {
+        this->m_storage = std::move(other.m_storage);
+        parent::eigvecs_ = std::move(other.eigvecs_);
+        parent::eigvals_ = std::move(other.eigvals_);
+        parent::haveEigens_ = true;
+      }
+
       Dyadic3DTensorGeneric(const parent& other) : parent(other) {}
 
       Dyadic3DTensorGeneric(

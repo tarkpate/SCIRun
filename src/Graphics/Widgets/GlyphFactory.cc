@@ -31,9 +31,10 @@ DEALINGS IN THE SOFTWARE.
 #include <Graphics/Widgets/Widget.h>
 
 using namespace SCIRun;
-using namespace SCIRun::Core::Geometry;
-using namespace SCIRun::Core::Datatypes;
-using namespace SCIRun::Graphics::Datatypes;
+using namespace Core::Geometry;
+using namespace Core::Datatypes;
+using namespace Graphics;
+using namespace Graphics::Datatypes;
 
 std::string RealGlyphFactory::sphere(SphereParameters params, WidgetBase& widget) const
 {
