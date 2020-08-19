@@ -499,8 +499,8 @@ namespace SCIRun{
       {
         const static double epsilon = pow(2, -50);
         auto eigvals = t.getEigenvalues();
-        for (auto& e : eigvals)
-          e = std::abs(e);
+        for (size_t i = 0; i < eigvals.size(); ++i)
+          eigvals[i] = std::abs(eigvals[i]);
 
         Dyadic3DTensor newT(t.getEigenvectors(), eigvals);
         eigvals = newT.getEigenvalues();

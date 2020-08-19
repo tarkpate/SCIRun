@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <initializer_list>
 #include <limits>
+#include "Eigen/src/Core/GlobalFunctions.h"
 #include <Core/Datatypes/share.h>
 
 namespace SCIRun {
@@ -74,7 +75,7 @@ namespace Core {
       }
 
       DyadicTensorGeneric(
-          const std::vector<VectorType>& eigvecs, const std::vector<Number>& eigvals)
+          const std::vector<VectorType>& eigvecs, const VectorType& eigvals)
           : parent()
       {
         setEigens(eigvecs, eigvals);
@@ -186,7 +187,7 @@ namespace Core {
         normalizeEigenvectors();
         haveEigens_ = true;
         setTensorValues();
-        reorderTensorValues();
+        // reorderTensorValues();
       }
 
       // This function is listed as something that will be added to Eigen::Tensor in the future.
@@ -219,7 +220,7 @@ namespace Core {
         return eigvals_[index];
       }
 
-      std::vector<Number> getEigenvalues() const
+      VectorType getEigenvalues() const
       {
         if (!haveEigens_) buildEigens();
         return eigvals_;
@@ -265,31 +266,41 @@ namespace Core {
       size_t getDimension1() const { return Dim; }
       size_t getDimension2() const { return Dim; }
 
-      std::vector<Number> getNormalizedEigenvalues()
+      VectorType getNormalizedEigenvalues()
       {
         auto eigvals = getEigenvalues();
         auto fro = frobeniusNorm();
-        for (auto& e : eigvals)
-          e /= fro;
+        for (size_t i = 0; i < Dim; ++i)
+          eigvals[i] /= fro;
         return eigvals;
       }
 
       Number frobeniusNorm() const
       {
         if (!haveEigens_) buildEigens();
-        return Eigen::Map<VectorType>(eigvals_.data()).norm();
+        return eigvals_.norm();
       }
 
       Number maxNorm() const
       {
         if (!haveEigens_) buildEigens();
         auto maxVal = (std::numeric_limits<Number>::min)();
-        for (const auto& e : eigvals_)
-          maxVal = (std::max)(maxVal, e);
+        for (size_t i = 0; i < Dim; ++i)
+          maxVal = (std::max)(maxVal, eigvals_[i]);
         return maxVal;
       }
 
+      void setEigens(const std::vector<VectorType>& eigvecs, const std::initializer_list<Number>& eigvals)
+      {
+        setEigens(eigvecs, std::vector<Number>(eigvals));
+      }
+
       void setEigens(const std::vector<VectorType>& eigvecs, const std::vector<Number>& eigvals)
+      {
+        setEigens(eigvecs, VectorType::Map(eigvals.data()));
+      }
+
+      void setEigens(const std::vector<VectorType>& eigvecs, const VectorType& eigvals)
       {
         if (eigvecs.size() != Dim)
           THROW_INVALID_ARGUMENT("The number of input eigvecs must be " + eigvecs_.size());
@@ -298,7 +309,7 @@ namespace Core {
         eigvecs_ = eigvecs;
         eigvals_ = eigvals;
         haveEigens_ = true;
-        reorderTensorValues();
+        // reorderTensorValues();
         setTensorValues();
       }
 
@@ -312,15 +323,15 @@ namespace Core {
       {
         if (!haveEigens_) buildEigens();
         Number sum = 0;
-        for (const auto& e : eigvals_)
-          sum += e;
+        for (size_t i = 0; i < Dim; ++i)
+          sum += eigvals_[i];
         return sum;
       }
 
      protected:
       const int RANK_ = 2;
       mutable std::vector<VectorType> eigvecs_;
-      mutable std::vector<Number> eigvals_;
+      mutable VectorType eigvals_;
       mutable bool haveEigens_ = false;
 
       void buildEigens() const
@@ -339,7 +350,7 @@ namespace Core {
           eigvals_[i] = vals(i).real();
           eigvecs_[i] = VectorType(Dim);
           for (size_t j = 0; j < Dim; ++j)
-            eigvecs_[i](j, 0) = vecs(j, i).real();
+            eigvecs_[i][j] = vecs(i, j).real();
         }
 
         haveEigens_ = true;
@@ -348,7 +359,7 @@ namespace Core {
 
       void reorderTensorValues() const
       {
-        if (!haveEigens_) return;
+        if (!haveEigens_) buildEigens();
         typedef std::pair<Number, VectorType> EigPair;
         std::vector<EigPair> sortList(Dim);
         for (size_t i = 0; i < Dim; ++i)
@@ -366,7 +377,7 @@ namespace Core {
 
       void setEigenvaluesFromEigenvectors() const
       {
-        eigvals_ = std::vector<Number>(eigvecs_.size());
+        // eigvals_ = VectorType();
         for (size_t i = 0; i < Dim; ++i)
           eigvals_[i] = eigvecs_[i].norm();
       }
@@ -379,9 +390,15 @@ namespace Core {
 
       void setTensorValues()
       {
+        auto D = eigvals_.asDiagonal();
+        MatrixType V;
+        for (size_t i = 0; i < Dim; ++i)
+          V.col(i) = eigvecs_[i];
+
+        auto mat = V * D * V.inverse();
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
-            (*this)(index(j), index(i)) = eigvecs_[i][j] * eigvals_[i];
+            (*this)(index(j), index(i)) = mat(i, j);
       }
 
       long int index(size_t i) const { return static_cast<long int>(i); }

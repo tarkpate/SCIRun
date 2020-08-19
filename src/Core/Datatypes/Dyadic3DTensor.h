@@ -46,6 +46,7 @@ namespace Core {
       using parent::parent;
       using parent::operator=;
       using parent::operator==;
+      using parent::reorderTensorValues;
 
       explicit Dyadic3DTensorGeneric(const std::initializer_list<VectorType>& eigvecs) : parent()
       {
@@ -117,8 +118,10 @@ namespace Core {
 
         static const double sqrt2 = std::sqrt(2);
         Eigen::Matrix<Number, 6, 1> mandel;
-        mandel << eigvecs[0][0], eigvecs[1][1], eigvecs[2][2], eigvecs[0][1] * sqrt2,
-            eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2;
+        // mandel << eigvecs[0][0], eigvecs[1][1], eigvecs[2][2], eigvecs[0][1] * sqrt2,
+        // eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2;
+        mandel << (*this)(0, 0), (*this)(1, 1), (*this)(2, 2), (*this)(0, 1) * sqrt2,
+            (*this)(0, 2) * sqrt2, (*this)(1, 2) * sqrt2;
         return mandel;
       }
 
@@ -161,26 +164,26 @@ namespace Core {
 
         auto eigvals = parent::getEigenvalues();
         auto eigvecs = parent::getEigenvectors();
-        for (auto& e : eigvals)
+        for (size_t i = 0; i < DIM_; ++i)
         {
-          e = std::abs(e);
-          if (e <= zeroThreshold) e = 0;
+          eigvals[i] = std::abs(eigvals[i]);
+          if (eigvals[i] <= zeroThreshold) eigvals[i] = 0;
         }
 
         if (makeGlyph)
-        {
-          auto cross = eigvecs[0].cross(eigvecs[1]);
-          if (cross.dot(eigvecs[2]) < 2e-12) eigvecs[2] = cross;
-        }
+          // {
+          // auto cross = eigvecs[0].cross(eigvecs[1]);
+          if (eigvals[2] < 2e-12) eigvecs[2] = eigvecs[0].cross(eigvecs[1]);  // cross;
+        // }
 
-        for (int d = 0; d < DIM_; ++d)
-          if (eigvals[d] == 0)
-          {
-            auto cross = eigvecs[(d + 1) % DIM_].cross(eigvecs[(d + 2) % DIM_]);
-            cross /= cross.norm();
-            eigvecs[d] = cross;
-            break;
-          }
+        // for (int d = 0; d < DIM_; ++d)
+        // if (eigvals[d] == 0)
+        // {
+        // auto cross = eigvecs[(d + 1) % DIM_].cross(eigvecs[(d + 2) % DIM_]);
+        // cross /= cross.norm();
+        // eigvecs[d] = cross;
+        // break;
+        // }
 
         parent::setEigens(eigvecs, eigvals);
       }

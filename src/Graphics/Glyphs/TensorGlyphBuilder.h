@@ -66,7 +66,7 @@ namespace Graphics {
     void makeTensorPositive(bool reorder = false, bool makeGlyph = true);
     void normalizeTensor();
     void setColor(const Core::Datatypes::ColorRGB& color);
-    void setResolution(double resolution);
+    void setResolution(int resolution);
     void generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis);
     void generateEllipsoid(GlyphConstructor& constructor, bool half);
     void generateBox(GlyphConstructor& constructor);
@@ -82,6 +82,9 @@ namespace Graphics {
     Core::Datatypes::Dyadic3DTensor getTensor() const;
     std::pair<double, double> getAAndB(bool linear, double emphasis);
 
+    void computeTransforms();
+    void postScaleTransforms();
+
    private:
     void generateBoxSide(GlyphConstructor& constructor,
         const std::vector<Core::Geometry::Vector>& points, const Core::Geometry::Vector& normal);
@@ -89,8 +92,6 @@ namespace Graphics {
 
    protected:
     void computeSinCosTable(bool half);
-    void computeTransforms();
-    void postScaleTransorms();
 
     const static int DIMENSIONS_ = 3;
     const static int BOX_FACE_POINTS_ = 4;

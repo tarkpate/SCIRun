@@ -747,9 +747,8 @@ void GlyphBuilder::renderTensors(
     // Counter for negative eigen values
     if (eigvals[0] < -epsilon || eigvals[1] < -epsilon || eigvals[2] < -epsilon) ++neg_eigval_count;
 
-    for (auto& e : eigvals)
-      e = fabs(e);
-
+    for (size_t i = 0; i < eigvals.size(); ++i)
+      eigvals[i] = fabs(eigvals[i]);
 
     auto eigvecs = t.getEigenvectors();
 
