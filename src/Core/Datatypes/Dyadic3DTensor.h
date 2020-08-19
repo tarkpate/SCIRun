@@ -90,25 +90,25 @@ namespace Core {
         (*this)(1, 2) = (*this)(2, 1) = v5;
       }
 
-      Number linearCertainty()
+      Number linearCertainty() const
       {
         auto eigvals = parent::getEigenvalues();
         return (eigvals[0] - eigvals[1]) / parent::eigenValueSum();
       }
 
-      Number planarCertainty()
+      Number planarCertainty() const
       {
         auto eigvals = parent::getEigenvalues();
         return 2.0 * (eigvals[1] - eigvals[2]) / parent::eigenValueSum();
       }
 
-      Number sphericalCertainty()
+      Number sphericalCertainty() const
       {
         auto eigvals = parent::getEigenvalues();
         return 3.0 * eigvals[2] / parent::eigenValueSum();
       }
 
-      Eigen::Matrix<Number, 6, 1> mandel()
+      Eigen::Matrix<Number, 6, 1> mandel() const
       {
         auto eigvals = parent::getEigenvalues();
         auto eigvecs = parent::getEigenvectors();
@@ -118,8 +118,6 @@ namespace Core {
 
         static const double sqrt2 = std::sqrt(2);
         Eigen::Matrix<Number, 6, 1> mandel;
-        // mandel << eigvecs[0][0], eigvecs[1][1], eigvecs[2][2], eigvecs[0][1] * sqrt2,
-        // eigvecs[0][2] * sqrt2, eigvecs[1][2] * sqrt2;
         mandel << (*this)(0, 0), (*this)(1, 1), (*this)(2, 2), (*this)(0, 1) * sqrt2,
             (*this)(0, 2) * sqrt2, (*this)(1, 2) * sqrt2;
         return mandel;

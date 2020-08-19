@@ -328,6 +328,14 @@ namespace Core {
         return sum;
       }
 
+      MatrixType getEigenvectorsAsMatrix() const
+      {
+        MatrixType V;
+        for (size_t i = 0; i < Dim; ++i)
+          V.col(i) = eigvecs_[i];
+        return V;
+      }
+
      protected:
       const int RANK_ = 2;
       mutable std::vector<VectorType> eigvecs_;
@@ -391,9 +399,7 @@ namespace Core {
       void setTensorValues()
       {
         auto D = eigvals_.asDiagonal();
-        MatrixType V;
-        for (size_t i = 0; i < Dim; ++i)
-          V.col(i) = eigvecs_[i];
+        auto V = this->getEigenvectorsAsMatrix();
 
         auto mat = V * D * V.inverse();
         for (size_t i = 0; i < Dim; ++i)
