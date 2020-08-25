@@ -107,31 +107,30 @@ enum FieldDataType
 GeometryHandle ShowUncertaintyGlyphsImpl::run(
     const GeometryIDGenerator& idgen, const FieldList& fields)
 {
-  time_t timer;
-  auto start = time(&timer);
+  // auto start = time(&timer);
   getPoints(fields);
-  std::cout << "time to get points " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to get points " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   verifyData(fields);
-  std::cout << "time to verify data " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to verify data " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   getTensors(fields);
-  std::cout << "time to get tensors " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to get tensors " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   computeMeanTensors();
-  std::cout << "time to compute mean tensors " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to compute mean tensors " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   computeCovarianceMatrices();
-  std::cout << "time to compute covariance tensors " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to compute covariance tensors " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   computeOffsetSurface();
-  std::cout << "time to compute offset surface " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to compute offset surface " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   // Creates id
   std::string idname = "ShowUncertaintyGlyphs";
@@ -152,8 +151,8 @@ GeometryHandle ShowUncertaintyGlyphsImpl::run(
   auto geom(boost::make_shared<GeometryObjectSpire>(idgen, idname, true));
   constructor_.buildObject(*geom, geom->uniqueID(), true, 0.5, ColorScheme::COLOR_UNIFORM, renState,
       primIn, vmesh->get_bounding_box(), true, nullptr);
-  std::cout << "time to make geom " << time(&timer) - start << "\n";
-  start = time(&timer);
+  // std::cout << "time to make geom " << time(&timer) - start << "\n";
+  // start = time(&timer);
 
   return geom;
 }

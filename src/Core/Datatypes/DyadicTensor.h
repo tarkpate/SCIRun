@@ -187,7 +187,7 @@ namespace Core {
         normalizeEigenvectors();
         haveEigens_ = true;
         setTensorValues();
-        // reorderTensorValues();
+        reorderTensorValues();
       }
 
       // This function is listed as something that will be added to Eigen::Tensor in the future.
@@ -319,13 +319,10 @@ namespace Core {
         setTensorValues();
       }
 
-      Number eigenValueSum() const
+      Number eigenvalueSum() const
       {
         if (!haveEigens_) buildEigens();
-        Number sum = 0;
-        for (size_t i = 0; i < Dim; ++i)
-          sum += eigvals_[i];
-        return sum;
+        return eigvals_.sum();
       }
 
       MatrixType getEigenvectorsAsMatrix() const

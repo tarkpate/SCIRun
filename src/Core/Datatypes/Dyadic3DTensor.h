@@ -93,19 +93,19 @@ namespace Core {
       Number linearCertainty() const
       {
         auto eigvals = parent::getEigenvalues();
-        return (eigvals[0] - eigvals[1]) / parent::eigenValueSum();
+        return (eigvals[0] - eigvals[1]) / parent::eigenvalueSum();
       }
 
       Number planarCertainty() const
       {
         auto eigvals = parent::getEigenvalues();
-        return 2.0 * (eigvals[1] - eigvals[2]) / parent::eigenValueSum();
+        return 2.0 * (eigvals[1] - eigvals[2]) / parent::eigenvalueSum();
       }
 
       Number sphericalCertainty() const
       {
         auto eigvals = parent::getEigenvalues();
-        return 3.0 * eigvals[2] / parent::eigenValueSum();
+        return 3.0 * eigvals[2] / parent::eigenvalueSum();
       }
 
       Eigen::Matrix<Number, 6, 1> mandel() const

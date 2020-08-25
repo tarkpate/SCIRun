@@ -80,7 +80,7 @@ namespace Graphics {
     Core::Geometry::Transform getScale();
     void setTensor(const Core::Datatypes::Dyadic3DTensor& t);
     Core::Datatypes::Dyadic3DTensor getTensor() const;
-    std::pair<double, double> getAAndB(bool linear, double emphasis);
+    std::pair<double, double> getAAndB(double cl, double cp, bool linear, double emphasis);
 
     void computeTransforms();
     void postScaleTransforms();
@@ -108,24 +108,38 @@ namespace Graphics {
     double cl_, cp_;
   };
 
+  using MandelVector = Eigen::Matrix<double, 6, 1>;
+  struct DifftValues
+  {
+   private:
+    const static size_t size = 12;
+
+   public:
+    std::array<Eigen::Vector3d, size> pseudoInv;
+    std::array<Eigen::Matrix3d, size> rotateInverse;
+    std::array<bool, size> linear;
+    std::array<double, size> A;
+    std::array<double, size> B;
+  };
+
   class SCISHARE UncertaintyTensorOffsetSurfaceBuilder : public TensorGlyphBuilder
   {
-    using MandelVector = Eigen::Matrix<double, 6, 1>;
-
    public:
     UncertaintyTensorOffsetSurfaceBuilder(const Core::Datatypes::Dyadic3DTensor& t,
         const Core::Geometry::Point& center, double emphasis);
     void generateOffsetSurface(
         GlyphConstructor& constructor, const Eigen::Matrix<double, 6, 6>& covarianceMatrix);
-    double diffT(const MandelVector& t1, const MandelVector& t2, const Core::Geometry::Point& p);
+    void precalculateDifftValues(DifftValues& vals, const MandelVector& t);
 
    private:
-    double evaluateSuperquadricImpl(
-        bool linear, const Core::Geometry::Point& p, double A, double B);
+    double evaluateSuperquadricImpl(bool linear, const Eigen::Vector3d& p, double A, double B);
 
-    double evaluateSuperquadricImplLinear(const Core::Geometry::Point& p, double A, double B);
-    double evaluateSuperquadricImplPlanar(const Core::Geometry::Point& p, double A, double B);
+    double evaluateSuperquadricImplLinear(const Eigen::Vector3d& p, double A, double B);
+    double evaluateSuperquadricImplPlanar(const Eigen::Vector3d& p, double A, double B);
+    MandelVector getQn(const DifftValues& vals, const Eigen::Vector3d& p);
     double emphasis_ = 0.0;
+    const double h_ = 0.000001;
+    const double hHalf_ = 0.5 * h_;
   };
 }
 }

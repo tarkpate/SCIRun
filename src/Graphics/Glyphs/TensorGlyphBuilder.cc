@@ -53,35 +53,31 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
 {
   auto start = std::chrono::system_clock::now();
   long time = 0;
-  const static double h = 0.000001;
-  const static double hHalf = 0.5 * h;
   Point origin = Point(0, 0, 0);
+  Vector centerVector = Vector(center_);
 
   t_.makePositive(true, false);
-  // t_.reorderTensorValues();
   computeTransforms();
   postScaleTransforms();
   computeSinCosTable(false);
 
   auto eigvecs = t_.getEigenvectors();
-  auto eigvals = t_.getEigenvalues();
   auto cross = eigvecs[0].cross(eigvecs[1]);
   bool flipVertices = cross.dot(eigvecs[2]) < 2e-12;
 
   MandelVector tMandel = t_.mandel();
-  std::cout << "tMandel " << tMandel << "\n";
 
   const Transform rotate = Transform(Point(0, 0, 0), makeSCIRunVector(eigvecs[0]),
       makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]));
   Transform scale = getScale();
-  // auto eigvalsVector = Vector(eigvals[0], eigvals[1], eigvals[2]);
-  // scale.post_scale(eigvalsVector);
   const Transform scaleThenRotate = rotate * scale;
   Transform rotateInv = rotate;
   rotateInv.invert();
 
-  bool linear = t_.linearCertainty() > t_.planarCertainty();
-  auto AAndB = getAAndB(linear, emphasis_);
+  double cl = t_.linearCertainty();
+  double cp = t_.planarCertainty();
+  bool linear = cl >= cp;
+  auto AAndB = getAAndB(cl, cp, linear, emphasis_);
   SuperquadricPointParams params;
   params.A = AAndB.first;
   params.B = AAndB.second;
@@ -90,18 +86,17 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
   normalParams.A = 2.0 - params.A;
   normalParams.B = 2.0 - params.B;
 
-  MandelVector finiteDiff;
-  finiteDiff.fill(0.0);
-
   auto pseudoInv = t_.getEigenvalues();
   Vector pseudoInvVector;
+  MandelVector qn;
   for (int i = 0; i < 3; ++i)
     pseudoInvVector[i] = 1 / pseudoInv[i];
 
+  DifftValues difftVals;
+  precalculateDifftValues(difftVals, tMandel);
   int nv = resolution_;
   int nu = resolution_ + 1;
-  long avg_time = 0;
-  long avg_time_difft = 0;
+
   for (int v = 0; v < nv - 1; ++v)
   {
     double sinPhi[2] = {tab2_.sin(v), tab2_.sin(v + 1)};
@@ -109,23 +104,16 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
 
     for (int u = 0; u < nu; ++u)
     {
-      start = std::chrono::system_clock::now();
       constructor.setOffset();
       params.sinTheta = normalParams.sinTheta = tab1_.sin(u);
       params.cosTheta = normalParams.cosTheta = tab1_.cos(u);
 
-      time = std::chrono::duration_cast<std::chrono::nanoseconds>(
-          std::chrono::system_clock::now() - start)
-                 .count();
-      // std::cout << "time to calculate angles " << time << "\n";
       for (int i = 0; i < 2; ++i)
       {
-        start = std::chrono::system_clock::now();
         params.sinPhi = normalParams.sinPhi = sinPhi[i];
         params.cosPhi = normalParams.cosPhi = cosPhi[i];
 
         Vector p = scaleThenRotate * Vector(evaluateSuperquadricPoint(linear, params));
-        // pseudoInv /= meanTensors_[f].magnitude();
 
         // Surface Derivative
         Eigen::Vector3d nn;
@@ -133,38 +121,21 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
         Vector diff = Vector(0.0, 0.0, 0.0);
         for (int j = 0; j < 3; ++j)
         {
-          diff[j] = hHalf;
+          diff[j] = hHalf_;
           Point newP = Point(pseudoInvVector * (rotateInv * (p + diff)));
-          double d1 = evaluateSuperquadricImpl(linear, newP, params.A, params.B);
+          double d1 = evaluateSuperquadricImpl(
+              linear, Eigen::Vector3d(newP.x(), newP.y(), newP.z()), params.A, params.B);
 
           newP = Point(pseudoInvVector * (rotateInv * (p - diff)));
-          double d2 = evaluateSuperquadricImpl(linear, newP, params.A, params.B);
+          double d2 = evaluateSuperquadricImpl(
+              linear, Eigen::Vector3d(newP.x(), newP.y(), newP.z()), params.A, params.B);
           diff[j] = 0.0;
-          nn(j) = (d1 - d2) / h;
+          nn(j) = (d1 - d2) / h_;
         }
-
-        auto difft_start = std::chrono::system_clock::now();
-        MandelVector qn;
-        // qn.fill(0.0);
-        // Vector pNorm = rotate * Vector(builder.evaluateSuperquadricPoint(linear, params));
-        for (int j = 0; j < 6; ++j)
-        {
-          finiteDiff(j) = hHalf;
-          qn(j) = diffT(tMandel + finiteDiff, tMandel - finiteDiff, Point(p));
-          // std::cout << "qn " << j << ": " << qn(j) << "\n";
-          finiteDiff(j) = 0.0;
-          // std::cout << "qn " << j << " " <<qn(j) << "\n";
-        }
-        auto time_difft = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::system_clock::now() - difft_start)
-                              .count();
-        avg_time_difft += time_difft;
-        // std::cout << "nn norm " << nn.norm() << "\n";
-        qn /= h;
+        auto eigP = Eigen::Vector3d(p.x(), p.y(), p.z());
+        auto qn = getQn(difftVals, eigP);
+        qn /= h_;
         qn /= nn.norm();
-
-        // std::cout << "qn " << qn << "\n";
-        // std::cout << "covarianceMatrix " << covarianceMatrix << "\n";
         double q = std::sqrt(
             std::abs((qn.transpose().eval() * (covarianceMatrix * qn).eval()).eval().value()));
         auto n = nn / nn.norm();
@@ -176,105 +147,77 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
 
         Vector offsetP = p + q * normal;
 
-        constructor.addVertex(offsetP + Vector(center_), nVector, ColorRGB(1.0, 1.0, 1.0));
-        time = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::system_clock::now() - start)
-                   .count();
-        avg_time += time;
-        // std::cout << "time to add vertex " << time << "\n";
+        constructor.addVertex(offsetP + centerVector, nVector, ColorRGB(1.0, 1.0, 1.0));
       }
 
       if (flipVertices)
       {
-        // std::cout << "vert flip\n";
         constructor.addIndicesToOffset(0, 2, 1);
         constructor.addIndicesToOffset(2, 3, 1);
       }
       else
       {
-        // std::cout << "not vert flip\n";
         constructor.addIndicesToOffset(0, 1, 2);
         constructor.addIndicesToOffset(2, 1, 3);
       }
     }
   }
-  avg_time /= ((nv-1) * nu * 2);
-  avg_time_difft /= ((nv - 1) * nu * 2);
-  std::cout << "avg time for new vert " << avg_time << "\n";
-  std::cout << "avg time for difft " << avg_time_difft << "\n";
   constructor.popIndicesNTimes(6);
-  // avg_time += std::chrono::duration_cast<std::chrono::milliseconds>(
-      // std::chrono::system_clock::now() - start)
-                  // .count();
 }
 
-double UncertaintyTensorOffsetSurfaceBuilder::diffT(
-    const MandelVector& t1, const MandelVector& t2, const Point& p)
+void UncertaintyTensorOffsetSurfaceBuilder::precalculateDifftValues(
+    DifftValues& vals, const MandelVector& t)
 {
-  std::vector<double> dist(2);
-  for (int i = 0; i < 2; ++i)
+  MandelVector finiteDiff;
+  finiteDiff.fill(0.0);
+
+  for (auto i = 0; i < 6; ++i)
   {
-    const MandelVector& tMandel = (i == 0) ? t1 : t2;
+    finiteDiff(i) = hHalf_;
+    std::vector<double> dist(2);
+    for (auto s = 0; s < 2; ++s)
+    {
+      auto index = 2 * i + s;
+      const MandelVector& tMandel =
+          (s == 0) ? MandelVector(t + finiteDiff) : MandelVector(t - finiteDiff);
 
-    auto start = std::chrono::system_clock::now();
-    auto t = symmetricTensorFromMandel(tMandel);
-    // std::cout << "t " << t << "\n";
-    // t.makePositive(true, false);
-    // t.reorderTensorValues();
-    bool linear = t.linearCertainty() > t.planarCertainty();
-    auto eigvecs = t.getEigenvectors();
-    // for (int i = 0 ; i < 3 ; ++i){
-      // std::cout << "eigvec " << i << ": ";
-      // std::cout << "[" << eigvecs[i][0] << " " << eigvecs[i][1] << " " << eigvecs[i][2] << "]\n";
-    // }
+      auto t = symmetricTensorFromMandel(tMandel);
+      double cl = t.linearCertainty();
+      double cp = t.planarCertainty();
+      vals.linear[index] = cl >= cp;
+      auto AAndB = getAAndB(cl, cp, vals.linear[index], emphasis_);
+      vals.A[index] = AAndB.first;
+      vals.B[index] = AAndB.second;
+      vals.rotateInverse[index] = t.getEigenvectorsAsMatrix().inverse();
+      vals.pseudoInv[index] = t.getEigenvalues();
+      for (int d = 0; d < 3; ++d)
+        vals.pseudoInv[index][d] = 1 / vals.pseudoInv[index][d];
+    }
+    finiteDiff(i) = 0.0;
+  }
+}
 
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now() - start)
-                    .count();
-    std::cout << "this point " << time << "\n";
-    TensorGlyphBuilder builder(t, p);
-    builder.computeTransforms();
-    builder.postScaleTransforms();
-    auto AAndB = builder.getAAndB(linear, emphasis_);
-    double A = AAndB.first;
-    double B = AAndB.second;
-    // Transform trans, rotate, scale;
-    // GGU::generateTransforms(p, makeSCIRunVector(eigvecs[0]), makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]), trans, rotate);
-    const Transform rotate = Transform(Point(0,0,0), makeSCIRunVector(eigvecs[0]), makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]));
-    const Transform scale = builder.getScale();
-    // const Transform rotate = Transform(Point(0, 0, 0), makeSCIRunVector(eigvecs[0]),
-        // makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]));
-    // Transform scale;
-    auto eigvals = t.getEigenvalues();
-    auto eigvalsVector = Vector(eigvals[0], eigvals[1], eigvals[2]);
-    // for (int i = 0; i < eigvals.size(); ++i)
-      // scale.set_mat_val(i, i, eigvals[i]);
-    // scale.post_scale(eigvalsVector);
-    auto rotateInv = rotate;
-    rotateInv.invert();
-    // std::cout << "rotateInv " << rotateInv << "\n";
-    auto scaleInv = scale;
-    scaleInv.invert();
-    // std::cout << "scaleInv " << scaleInv << "\n";
-
-    // auto t = newBuilder.getTensor();
-    Vector pseudoInv = eigvalsVector;
-    for (int i = 0; i < 3; ++i)
-      pseudoInv[i] = 1 / pseudoInv[i];
-    // std::cout << "pseudoInv " << pseudoInv << "\n";
-
-    Vector newP = (pseudoInv * Vector(rotateInv * p));
-    // std::cout << "newP " << newP << "\n";
-    dist[i] = evaluateSuperquadricImpl(linear, Point(newP), A, B);
-    // std::cout << "dist " << i << " " << dist[i] <<"\n";
+MandelVector UncertaintyTensorOffsetSurfaceBuilder::getQn(
+    const DifftValues& vals, const Eigen::Vector3d& p)
+{
+  MandelVector qn;
+  for (int i = 0; i < 6; ++i)
+  {
+    std::vector<double> dist(2);
+    for (int s = 0; s < 2; ++s)
+    {
+      auto index = 2 * i + s;
+      Eigen::Vector3d newP = vals.pseudoInv[index].cwiseProduct(vals.rotateInverse[index] * p);
+      dist[s] = evaluateSuperquadricImpl(vals.linear[index], newP, vals.A[index], vals.B[index]);
+    }
+    qn(i) = dist[0] - dist[1];
   }
 
-  // std::cout << "dist diff " << dist[0] - dist[1] << "\n";
-  return dist[0] - dist[1];
+  return qn;
 }
 
 double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImpl(
-    bool linear, const Point& p, double A, double B)
+    bool linear, const Eigen::Vector3d& p, double A, double B)
 {
   if (linear)
     return evaluateSuperquadricImplLinear(p, A, B);
@@ -284,10 +227,10 @@ double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImpl(
 
 // Generate around x-axis
 double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImplLinear(
-    const Point& p, double A, double B)
+    const Eigen::Vector3d& p, double A, double B)
 {
-  double twoDivA = 2.0 / A;
-  double twoDivB = 2.0 / B;
+  const double twoDivA = 2.0 / A;
+  const double twoDivB = 2.0 / B;
   return GGU::spow(
              GGU::spow(std::abs(p.y()), twoDivA) + GGU::spow(std::abs(p.z()), twoDivA), A / B) +
          GGU::spow(std::abs(p.x()), twoDivB) - 1;
@@ -295,10 +238,10 @@ double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImplLinear(
 
 // Generate around z-axis
 double UncertaintyTensorOffsetSurfaceBuilder::evaluateSuperquadricImplPlanar(
-    const Point& p, double A, double B)
+    const Eigen::Vector3d& p, double A, double B)
 {
-  double twoDivA = 2.0 / A;
-  double twoDivB = 2.0 / B;
+  const double twoDivA = 2.0 / A;
+  const double twoDivB = 2.0 / B;
   return GGU::spow(
              GGU::spow(std::abs(p.x()), twoDivA) + GGU::spow(std::abs(p.y()), twoDivA), A / B) +
          GGU::spow(std::abs(p.z()), twoDivB) - 1;
@@ -448,10 +391,11 @@ Point TensorGlyphBuilder::evaluateEllipsoidPoint(EllipsoidPointParams& params)
   return Point(x, y, z);
 }
 
-std::pair<double, double> TensorGlyphBuilder::getAAndB(bool linear, double emphasis)
+std::pair<double, double> TensorGlyphBuilder::getAAndB(
+    double cl, double cp, bool linear, double emphasis)
 {
-  double pPower = GlyphGeomUtility::spow((1.0 - t_.planarCertainty()), emphasis);
-  double lPower = GlyphGeomUtility::spow((1.0 - t_.linearCertainty()), emphasis);
+  double pPower = GlyphGeomUtility::spow(1.0 - cp, emphasis);
+  double lPower = GlyphGeomUtility::spow(1.0 - cl, emphasis);
   if (linear)
     return std::make_pair(pPower, lPower);
   else
@@ -466,8 +410,10 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   postScaleTransforms();
   computeSinCosTable(false);
 
-  bool linear = t_.linearCertainty() > t_.planarCertainty();
-  auto AAndB = getAAndB(linear, emphasis);
+  double cl = t_.linearCertainty();
+  double cp = t_.planarCertainty();
+  bool linear = cl >= cp;
+  auto AAndB = getAAndB(cl, cp, linear, emphasis);
   SuperquadricPointParams params;
   params.A = AAndB.first;
   params.B = AAndB.second;
@@ -573,11 +519,12 @@ void TensorGlyphBuilder::generateBox(GlyphConstructor& constructor)
   // std::cout << "normals\n";
   for (auto& v : normals)
     // std::cout << v << "\n";
-  if (flatTensor_) {
-    // std::cout << "is flat!\n";
-    for (int d = 0; d < DIMENSIONS_; ++d)
-      normals[d] = zeroNorm_;
-  }
+    if (flatTensor_)
+    {
+      // std::cout << "is flat!\n";
+      for (int d = 0; d < DIMENSIONS_; ++d)
+        normals[d] = zeroNorm_;
+    }
 
   generateBoxSide(constructor, {points[5], points[4], points[7], points[6]}, normals[0]);
   generateBoxSide(constructor, {points[7], points[6], points[3], points[2]}, normals[1]);

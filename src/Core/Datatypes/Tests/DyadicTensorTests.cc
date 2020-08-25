@@ -30,7 +30,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sstream>
-#include "Core/Utils/Exception.h"
+#include <Core/Utils/Exception.h>
 
 using namespace SCIRun;
 using namespace Core::Datatypes;
