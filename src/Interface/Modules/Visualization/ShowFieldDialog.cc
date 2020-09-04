@@ -55,15 +55,6 @@ ShowFieldDialog::ShowFieldDialog(const std::string& name, ModuleStateHandle stat
   addCheckBoxManager(enableTransparencyEdgesCheckBox_, Parameters::EdgeTransparency);
   addCheckBoxManager(enableTransparencyFacesCheckBox_, Parameters::FaceTransparency);
   addCheckBoxManager(invertNormalsCheckBox, Parameters::FaceInvertNormals);
-  addCheckBoxManager(showTextCheckBox_, Parameters::ShowText);
-  addCheckBoxManager(showDataValuesCheckBox_, Parameters::ShowDataValues);
-  addCheckBoxManager(showNodeIndicesCheckBox_, Parameters::ShowNodeIndices);
-  addCheckBoxManager(showEdgeIndicesCheckBox_, Parameters::ShowEdgeIndices);
-  addCheckBoxManager(showFaceIndicesCheckBox_, Parameters::ShowFaceIndices);
-  addCheckBoxManager(showCellIndicesCheckBox_, Parameters::ShowCellIndices);
-  addCheckBoxManager(cullTextCheckBox_, Parameters::CullBackfacingText);
-  addCheckBoxManager(textAlwaysVisibleCheckBox_, Parameters::TextAlwaysVisible);
-  addCheckBoxManager(renderIndicesLocationsCheckBox_, Parameters::RenderAsLocation);
   addCheckBoxManager(useFaceNormalsCheckBox_, Parameters::UseFaceNormals);
   addDoubleSpinBoxManager(transparencyDoubleSpinBox_, Parameters::FaceTransparencyValue);
   addDoubleSpinBoxManager(nodeTransparencyDoubleSpinBox_, Parameters::NodeTransparencyValue);
@@ -72,14 +63,11 @@ ShowFieldDialog::ShowFieldDialog(const std::string& name, ModuleStateHandle stat
   addDoubleSpinBoxManager(cylinder_rad_spin, Parameters::CylinderRadius);
   addSpinBoxManager(cylinder_res_spin, Parameters::CylinderResolution);
   addSpinBoxManager(sphereResolutionSpinBox, Parameters::SphereResolution);
-  addSpinBoxManager(textSizeSpinBox_, Parameters::TextSize);
-  addSpinBoxManager(textPrecisionSpinBox_, Parameters::TextPrecision);
   addRadioButtonGroupManager({ edgesAsLinesButton_, edgesAsCylindersButton_ }, Parameters::EdgesAsCylinders);
   addRadioButtonGroupManager({ nodesAsPointsButton_, nodesAsSpheresButton_ }, Parameters::NodeAsSpheres);
   addRadioButtonGroupManager({ defaultNodeColoringButton_, colormapLookupNodeColoringButton_/*, conversionRGBNodeColoringButton_*/ }, Parameters::NodesColoring);
   addRadioButtonGroupManager({ defaultEdgeColoringButton_, colormapLookupEdgeColoringButton_/*, conversionRGBEdgeColoringButton_*/ }, Parameters::EdgesColoring);
   addRadioButtonGroupManager({ defaultFaceColoringButton_, colormapLookupFaceColoringButton_/*, conversionRGBFaceColoringButton_*/ }, Parameters::FacesColoring);
-  addRadioButtonGroupManager({ textColoringRadioButton_, colormapLookupTextRadioButton_, conversionRGBTextRadioButton_ }, Parameters::TextColoring);
 
   connect(defaultMeshColorButton_, SIGNAL(clicked()), this, SLOT(assignDefaultMeshColor()));
   connect(textColorPushButton_, SIGNAL(clicked()), this, SLOT(assignDefaultTextColor()));
@@ -108,7 +96,20 @@ ShowFieldDialog::ShowFieldDialog(const std::string& name, ModuleStateHandle stat
   textureCheckBox_->setVisible(false);
 
   //Text Tab
-  displayOptionsTabs_->removeTab(3);
+  addCheckBoxManager(showTextCheckBox_, Parameters::ShowText);
+  addCheckBoxManager(showDataValuesCheckBox_, Parameters::ShowDataValues);
+  addCheckBoxManager(showNodeIndicesCheckBox_, Parameters::ShowNodeIndices);
+  addCheckBoxManager(showEdgeIndicesCheckBox_, Parameters::ShowEdgeIndices);
+  addCheckBoxManager(showFaceIndicesCheckBox_, Parameters::ShowFaceIndices);
+  addCheckBoxManager(showCellIndicesCheckBox_, Parameters::ShowCellIndices);
+  addCheckBoxManager(cullTextCheckBox_, Parameters::CullBackfacingText);
+  addCheckBoxManager(textAlwaysVisibleCheckBox_, Parameters::TextAlwaysVisible);
+  addCheckBoxManager(renderIndicesLocationsCheckBox_, Parameters::RenderAsLocation);
+  addSpinBoxManager(textSizeSpinBox_, Parameters::TextSize);
+  addSpinBoxManager(textPrecisionSpinBox_, Parameters::TextPrecision);
+  addRadioButtonGroupManager(
+      {textColoringRadioButton_, colormapLookupTextRadioButton_, conversionRGBTextRadioButton_},
+      Parameters::TextColoring);
 }
 
 void ShowFieldDialog::push()

@@ -88,6 +88,12 @@ public:
     RenderState state, GeometryHandle geom,
     const std::string& id);
 
+  void renderText(FieldHandle field,
+    boost::optional<ColorMapHandle> colorMap,
+    Interruptible* interruptible,
+    RenderState state, GeometryHandle geom,
+    const std::string& id);
+
   void renderFacesLinear(
     FieldHandle field,
     boost::optional<ColorMapHandle> colorMap,
@@ -117,7 +123,9 @@ public:
   RenderState getNodeRenderState(boost::optional<ColorMapHandle> colorMap);
   RenderState getEdgeRenderState(boost::optional<ColorMapHandle> colorMap);
   RenderState getFaceRenderState(boost::optional<ColorMapHandle> colorMap);
-private:
+  RenderState getTextRenderState(boost::optional<ColorMapHandle> colorMap);
+
+ private:
   float faceTransparencyValue_ = 0.65f;
   float edgeTransparencyValue_ = 0.65f;
   float nodeTransparencyValue_ = 0.65f;
@@ -228,36 +236,26 @@ RenderState GeometryBuilder::getNodeRenderState(
 {
   RenderState renState;
 
+  bool useDefaultColor = state_->getValue(NodesColoring).toInt() == 0;
   bool useColorMap = state_->getValue(NodesColoring).toInt() == 1;
   bool rgbConversion = state_->getValue(NodesColoring).toInt() == 2;
+  if (useColorMap && !colorMap)
+  {
+    useColorMap = false;
+    useDefaultColor = true;
+    state_->setValue(NodesColoring, 0);
+  }
   renState.set(RenderState::IS_ON, state_->getValue(ShowNodes).toBool());
   renState.set(RenderState::USE_TRANSPARENT_NODES, state_->getValue(NodeTransparency).toBool());
 
   renState.set(RenderState::USE_SPHERE, state_->getValue(NodeAsSpheres).toInt() == 1);
+  auto col = ColorRGB(state_->getValue(DefaultMeshColor).toString());
+  if (col.r() > 1.0 || col.g() > 1.0 || col.b() > 1.0)
+    col = ColorRGB(col.r() / 255., col.g() / 255., col.b() / 255.);
 
-  renState.defaultColor = ColorRGB(state_->getValue(DefaultMeshColor).toString());
-  renState.defaultColor = (renState.defaultColor.r() > 1.0 ||
-                           renState.defaultColor.g() > 1.0 ||
-                           renState.defaultColor.b() > 1.0)?
-                                ColorRGB(
-                                renState.defaultColor.r() / 255.,
-                                renState.defaultColor.g() / 255.,
-                                renState.defaultColor.b() / 255.)
-                            :   renState.defaultColor;
-
-  if (colorMap && useColorMap)
-  {
-    renState.set(RenderState::USE_COLORMAP_ON_NODES, true);
-  }
-  else if (rgbConversion)
-  {
-    renState.set(RenderState::USE_COLOR_CONVERT_ON_NODES, true);
-  }
-  else
-  {
-    renState.set(RenderState::USE_DEFAULT_COLOR_NODES, true);
-    state_->setValue(NodesColoring, 0);
-  }
+  renState.set(RenderState::USE_COLORMAP_ON_NODES, useColorMap);
+  renState.set(RenderState::USE_COLOR_CONVERT_ON_NODES, rgbConversion);
+  renState.set(RenderState::USE_DEFAULT_COLOR_NODES, useDefaultColor);
 
   return renState;
 }
@@ -266,37 +264,28 @@ RenderState GeometryBuilder::getEdgeRenderState(boost::optional<boost::shared_pt
 {
   RenderState renState;
 
+  bool useDefaultColor = state_->getValue(EdgesColoring).toInt() == 0;
   bool useColorMap = state_->getValue(EdgesColoring).toInt() == 1;
   bool rgbConversion = state_->getValue(EdgesColoring).toInt() == 2;
+  if (useColorMap && !colorMap)
+  {
+    useColorMap = false;
+    useDefaultColor = true;
+    state_->setValue(EdgesColoring, 0);
+  }
   renState.set(RenderState::IS_ON, state_->getValue(ShowEdges).toBool());
   renState.set(RenderState::USE_TRANSPARENT_EDGES, state_->getValue(EdgeTransparency).toBool());
   renState.set(RenderState::USE_CYLINDER, state_->getValue(EdgesAsCylinders).toInt() == 1);
 
-  renState.defaultColor = ColorRGB(state_->getValue(DefaultMeshColor).toString());
-  renState.defaultColor = (renState.defaultColor.r() > 1.0 ||
-                           renState.defaultColor.g() > 1.0 ||
-                           renState.defaultColor.b() > 1.0)?
-                                ColorRGB(
-                                renState.defaultColor.r() / 255.,
-                                renState.defaultColor.g() / 255.,
-                                renState.defaultColor.b() / 255.)
-                            :   renState.defaultColor;
+  auto col = ColorRGB(state_->getValue(DefaultMeshColor).toString());
+  if (col.r() > 1.0 || col.g() > 1.0 || col.b() > 1.0)
+    col = ColorRGB(col.r() / 255., col.g() / 255., col.b() / 255.);
 
   edgeTransparencyValue_ = static_cast<float>(state_->getValue(EdgeTransparencyValue).toDouble());
 
-  if (colorMap && useColorMap)
-  {
-    renState.set(RenderState::USE_COLORMAP_ON_EDGES, true);
-  }
-  else if (rgbConversion)
-  {
-    renState.set(RenderState::USE_COLOR_CONVERT_ON_EDGES, true);
-  }
-  else
-  {
-    renState.set(RenderState::USE_DEFAULT_COLOR_EDGES, true);
-    state_->setValue(EdgesColoring, 0);
-  }
+  renState.set(RenderState::USE_COLORMAP_ON_EDGES, useColorMap);
+  renState.set(RenderState::USE_COLOR_CONVERT_ON_EDGES, rgbConversion);
+  renState.set(RenderState::USE_DEFAULT_COLOR_EDGES, useDefaultColor);
 
   return renState;
 }
@@ -305,37 +294,55 @@ RenderState GeometryBuilder::getFaceRenderState(boost::optional<boost::shared_pt
 {
   RenderState renState;
 
+  bool useDefaultColor = state_->getValue(FacesColoring).toInt() == 0;
   bool useColorMap = state_->getValue(FacesColoring).toInt() == 1;
   bool rgbConversion = state_->getValue(FacesColoring).toInt() == 2;
+  if (useColorMap && !colorMap)
+  {
+    useColorMap = false;
+    useDefaultColor = true;
+    state_->setValue(FacesColoring, 0);
+  }
   renState.set(RenderState::IS_ON, state_->getValue(ShowFaces).toBool());
   renState.set(RenderState::USE_TRANSPARENCY, state_->getValue(FaceTransparency).toBool());
   renState.set(RenderState::USE_FACE_NORMALS, state_->getValue(UseFaceNormals).toBool());
 
-  renState.defaultColor = ColorRGB(state_->getValue(DefaultMeshColor).toString());
-  renState.defaultColor = (renState.defaultColor.r() > 1.0 ||
-                           renState.defaultColor.g() > 1.0 ||
-                           renState.defaultColor.b() > 1.0)?
-                                ColorRGB(
-                                renState.defaultColor.r() / 255.,
-                                renState.defaultColor.g() / 255.,
-                                renState.defaultColor.b() / 255.)
-                            :   renState.defaultColor;
+  auto col = ColorRGB(state_->getValue(DefaultMeshColor).toString());
+  if (col.r() > 1.0 || col.g() > 1.0 || col.b() > 1.0)
+    col = ColorRGB(col.r() / 255., col.g() / 255., col.b() / 255.);
 
   faceTransparencyValue_ = static_cast<float>(state_->getValue(FaceTransparencyValue).toDouble());
 
-  if (colorMap && useColorMap)
+  renState.set(RenderState::USE_COLORMAP, useColorMap);
+  renState.set(RenderState::USE_COLOR_CONVERT, rgbConversion);
+  renState.set(RenderState::USE_DEFAULT_COLOR, useDefaultColor);
+
+  return renState;
+}
+
+RenderState GeometryBuilder::getTextRenderState(boost::optional<boost::shared_ptr<ColorMap>> colorMap)
+{
+  RenderState renState;
+
+  bool useDefaultColor = state_->getValue(TextColoring).toInt() == 0;
+  bool useColorMap = state_->getValue(TextColoring).toInt() == 1;
+  bool rgbConversion = state_->getValue(TextColoring).toInt() == 2;
+  if (useColorMap && !colorMap)
   {
-    renState.set(RenderState::USE_COLORMAP, true);
+    useColorMap = false;
+    useDefaultColor = true;
+    state_->setValue(TextColoring, 0);
   }
-  else if (rgbConversion)
-  {
-    renState.set(RenderState::USE_COLOR_CONVERT, true);
-  }
-  else
-  {
-    renState.set(RenderState::USE_DEFAULT_COLOR, true);
-    state_->setValue(FacesColoring, 0);
-  }
+  renState.set(RenderState::IS_ON, state_->getValue(ShowText).toBool());
+  renState.set(RenderState::USE_TRANSPARENCY, true);
+
+  auto col = ColorRGB(state_->getValue(DefaultTextColor).toString());
+  if (col.r() > 1.0 || col.g() > 1.0 || col.b() > 1.0)
+    col = ColorRGB(col.r() / 255.,col.g() / 255.,col.b() / 255.);
+
+  renState.set(RenderState::USE_COLORMAP, useColorMap);
+  renState.set(RenderState::USE_COLOR_CONVERT, rgbConversion);
+  renState.set(RenderState::USE_DEFAULT_COLOR, useDefaultColor);
 
   return renState;
 }
@@ -352,6 +359,7 @@ GeometryHandle GeometryBuilder::buildGeometryObject(
   bool showNodes = state_->getValue(ShowNodes).toBool();
   bool showEdges = state_->getValue(ShowEdges).toBool();
   bool showFaces = state_->getValue(ShowFaces).toBool();
+  bool showtext = state_->getValue(ShowText).toBool();
   // Resultant geometry type (representing a spire object and a number of passes).
 
   std::string idname = "EntireField";
@@ -385,6 +393,9 @@ GeometryHandle GeometryBuilder::buildGeometryObject(
 
   if (showNodes)
     renderNodes(field, colorMap, interruptible, getNodeRenderState(colorMap), geom, geom->uniqueID());
+
+  if (showText)
+    renderText(field, colorMap, interruptible, getTextRenderState(colorMap), geom, geom->uniqueID());
 
   return geom;
 }
