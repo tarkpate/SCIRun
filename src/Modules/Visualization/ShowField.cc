@@ -333,16 +333,16 @@ RenderState GeometryBuilder::getTextRenderState(boost::optional<boost::shared_pt
     useDefaultColor = true;
     state_->setValue(TextColoring, 0);
   }
+  renState.set(RenderState::IS_TEXT, true);
   renState.set(RenderState::IS_ON, state_->getValue(ShowText).toBool());
-  renState.set(RenderState::USE_TRANSPARENCY, true);
 
   auto col = ColorRGB(state_->getValue(DefaultTextColor).toString());
   if (col.r() > 1.0 || col.g() > 1.0 || col.b() > 1.0)
     col = ColorRGB(col.r() / 255.,col.g() / 255.,col.b() / 255.);
 
-  renState.set(RenderState::USE_COLORMAP, useColorMap);
-  renState.set(RenderState::USE_COLOR_CONVERT, rgbConversion);
-  renState.set(RenderState::USE_DEFAULT_COLOR, useDefaultColor);
+  renState.set(RenderState::USE_COLORMAP_ON_TEXT, useColorMap);
+  renState.set(RenderState::USE_COLOR_CONVERT_ON_TEXT, rgbConversion);
+  renState.set(RenderState::USE_DEFAULT_COLOR_TEXT, useDefaultColor);
 
   return renState;
 }
@@ -359,7 +359,7 @@ GeometryHandle GeometryBuilder::buildGeometryObject(
   bool showNodes = state_->getValue(ShowNodes).toBool();
   bool showEdges = state_->getValue(ShowEdges).toBool();
   bool showFaces = state_->getValue(ShowFaces).toBool();
-  bool showtext = state_->getValue(ShowText).toBool();
+  bool showText = state_->getValue(ShowText).toBool();
   // Resultant geometry type (representing a spire object and a number of passes).
 
   std::string idname = "EntireField";
@@ -1070,6 +1070,89 @@ void GeometryBuilder::renderEdges(
 
   glyphs.buildObject(*geom, uniqueNodeID, state.get(RenderState::USE_TRANSPARENT_EDGES), edgeTransparencyValue_,
     colorScheme, state, primIn, mesh->get_bounding_box(), true, textureMap);
+}
+
+void GeometryBuilder::renderText(FieldHandle field,
+  boost::optional<boost::shared_ptr<ColorMap>> colorMap, Interruptible* interruptible,
+  RenderState state, GeometryHandle geom, const std::string& id)
+{
+  /*
+  VField* fld = field->vfield();
+  VMesh*  mesh = field->vmesh();
+
+  double sval;
+  Vector vval;
+  Tensor tval;
+
+  ColorScheme colorScheme;
+  ColorRGB node_color;
+
+  ColorMapHandle textureMap, coordinateMap;
+  spiltColorMapToTextureAndCoordinates(colorMap, textureMap, coordinateMap);
+
+  if (fld->basis_order() < 0 || (fld->basis_order() == 0 && mesh->dimensionality() != 0) || state.get(RenderState::USE_DEFAULT_COLOR_TEXT))
+    colorScheme = ColorScheme::COLOR_UNIFORM;
+  else if (state.get(RenderState::USE_COLORMAP_ON_TEXT))
+    colorScheme = ColorScheme::COLOR_MAP;
+  else
+    colorScheme = ColorScheme::COLOR_IN_SITU;
+
+  mesh->synchronize(Mesh::NODES_E);
+
+  VMesh::Node::iterator eiter, eiter_end;
+  mesh->begin(eiter);
+  mesh->end(eiter_end);
+
+  std::stringstream ss;
+  ss << state.get(RenderState::USE_CYLINDER) << num_strips << radius
+     << static_cast<int>(colorScheme);
+  std::string uniqueTextID = id + "text" + ss.str();
+
+  SpireIBO::PRIMITIVE primIn = SpireIBO::PRIMITIVE::TRIANGLES;
+
+  GlyphGeom glyphs;
+  while (eiter != eiter_end)
+  {
+    interruptible->checkForInterruption();
+
+    Point p;
+    mesh->get_point(p, *eiter);
+    //coloring options
+    if (colorScheme != ColorScheme::COLOR_UNIFORM)
+    {
+      ColorMapHandle map = colorMap.get();
+      if (fld->is_scalar())
+      {
+        fld->get_value(sval, *eiter);
+        node_color = ColorRGB(coordinateMap->valueToIndex(sval));
+      }
+      else if (fld->is_vector())
+      {
+        fld->get_value(vval, *eiter);
+        node_color = ColorRGB(coordinateMap->valueToIndex(vval));
+      }
+      else if (fld->is_tensor())
+      {
+        fld->get_value(tval, *eiter);
+        node_color = ColorRGB(coordinateMap->valueToIndex(tval));
+      }
+    }
+    //accumulate VBO or IBO data
+    if (state.get(RenderState::USE_SPHERE))
+    {
+      glyphs.addSphere(p, radius, num_strips, node_color);
+    }
+    else
+    {
+      glyphs.addPoint(p, node_color);
+    }
+
+    ++eiter;
+  }
+
+  glyphs.buildObject(*geom, uniqueNodeID, state.get(RenderState::USE_TRANSPARENT_NODES), nodeTransparencyValue_,
+    colorScheme, state, primIn, mesh->get_bounding_box(), true, textureMap);
+  */
 }
 
 void ShowField::updateAvailableRenderOptions(FieldHandle field)

@@ -37,120 +37,124 @@ namespace SCIRun {
 class SCISHARE RenderState
 {
 public:
+ enum ActionFlags
+ {
+   IS_ON = 0,
+   HAS_DATA,
+   USE_TRANSPARENCY,
+   NORMALIZE_DATA,
 
-  enum ActionFlags
-  {
-    IS_ON = 0,
-    HAS_DATA,
-    USE_TRANSPARENCY,
-    NORMALIZE_DATA,
-    IS_TEXT,
+   USE_DEFAULT_COLOR,
+   USE_COLORMAP,
+   USE_COLOR_CONVERT,
 
-    USE_DEFAULT_COLOR,
-    USE_COLORMAP,
-    USE_COLOR_CONVERT,
+   SMALL_IS_DOT,
 
-    SMALL_IS_DOT,
+   DIRTY,
 
-    DIRTY,
+   // Widget
+   IS_WIDGET,
 
-    // Widget
-    IS_WIDGET,
+   // Node flags
+   USE_SPHERE,
+   USE_TRANSPARENT_NODES,
+   USE_DEFAULT_COLOR_NODES,
+   USE_COLORMAP_ON_NODES,
+   USE_COLOR_CONVERT_ON_NODES,
 
-    // Node flags
-    USE_SPHERE,
-    USE_TRANSPARENT_NODES,
-    USE_DEFAULT_COLOR_NODES,
-    USE_COLORMAP_ON_NODES,
-    USE_COLOR_CONVERT_ON_NODES,
+   // Edge flags
+   USE_CYLINDER,
+   USE_TRANSPARENT_EDGES,
+   USE_DEFAULT_COLOR_EDGES,
+   USE_COLORMAP_ON_EDGES,
+   USE_COLOR_CONVERT_ON_EDGES,
 
-    // Edge flags
-    USE_CYLINDER,
-    USE_TRANSPARENT_EDGES,
-    USE_DEFAULT_COLOR_EDGES,
-    USE_COLORMAP_ON_EDGES,
-    USE_COLOR_CONVERT_ON_EDGES,
+   // Text flags
+   IS_TEXT,
+   USE_DEFAULT_COLOR_TEXT,
+   USE_COLORMAP_ON_TEXT,
+   USE_COLOR_CONVERT_ON_TEXT,
 
-    // Face flags
-    USE_NORMALS,
-    USE_FACE_NORMALS,
-    USE_TEXTURE,
-    IS_DOUBLE_SIDED,
+   // Face flags
+   USE_NORMALS,
+   USE_FACE_NORMALS,
+   USE_TEXTURE,
+   IS_DOUBLE_SIDED,
 
-    // Text flags
-    BACKFACES_CULL,
-    ALWAYS_VISIBLE,
+   // Text flags
+   BACKFACES_CULL,
+   ALWAYS_VISIBLE,
 
-    // Scalar data flags
+   // Scalar data flags
 
-    // Vector data flags
-    USE_TRANSPARENT_VECTOR_GLYPHS,
-    BIDIRECTIONAL,
+   // Vector data flags
+   USE_TRANSPARENT_VECTOR_GLYPHS,
+   BIDIRECTIONAL,
 
-    // Tensor data flags
+   // Tensor data flags
 
-    // Secondary / tertiary data flags
-    USE_ALPHA,
-    USE_VALUE,
-    USE_MAJOR_RADIUS,
-    USE_MINOR_RADIUS,
-    USE_PITCH,
+   // Secondary / tertiary data flags
+   USE_ALPHA,
+   USE_VALUE,
+   USE_MAJOR_RADIUS,
+   USE_MINOR_RADIUS,
+   USE_PITCH,
 
-    // Rendering Options
-    USE_BLEND,
+   // Rendering Options
+   USE_BLEND,
 
-    MAX_ACTION_FLAGS
-  };
+   MAX_ACTION_FLAGS
+ };
 
-  enum InputPort
-  {
+ enum InputPort
+ {
    PRIMARY_PORT,
    SECONDARY_PORT,
    TERTIARY_PORT
-  };
+ };
 
-  enum GlyphType
-  {
-    POINT_GLYPH,
-    SPHERE_GLYPH,
-    ELLIPSOID_GLYPH,
-    SUPERQUADRIC_TENSOR_GLYPH,
-    BOX_GLYPH,
-    AXIS_GLYPH,
-    LINE_GLYPH,
-    NEEDLE_GLYPH,
-    COMET_GLYPH,
-    CONE_GLYPH,
-    ARROW_GLYPH,
-    DISK_GLYPH,
-    RING_GLYPH,
-    SPRING_GLYPH
-  };
+ enum GlyphType
+ {
+   POINT_GLYPH,
+   SPHERE_GLYPH,
+   ELLIPSOID_GLYPH,
+   SUPERQUADRIC_TENSOR_GLYPH,
+   BOX_GLYPH,
+   AXIS_GLYPH,
+   LINE_GLYPH,
+   NEEDLE_GLYPH,
+   COMET_GLYPH,
+   CONE_GLYPH,
+   ARROW_GLYPH,
+   DISK_GLYPH,
+   RING_GLYPH,
+   SPRING_GLYPH
+ };
 
-  enum TransparencySortType
-  {
-    CONTINUOUS_SORT,
-    UPDATE_SORT,
-    LISTS_SORT
-  };
+ enum TransparencySortType
+ {
+   CONTINUOUS_SORT,
+   UPDATE_SORT,
+   LISTS_SORT
+ };
 
-  RenderState();
+ RenderState();
 
-  void set(ActionFlags flag, bool truth);
-  bool get(ActionFlags flag) const;
+ void set(ActionFlags flag, bool truth);
+ bool get(ActionFlags flag) const;
 
-  // Render state flags.
-  bool mFlags[MAX_ACTION_FLAGS];
-  TransparencySortType mSortType = CONTINUOUS_SORT;
-  GlyphType mGlyphType = POINT_GLYPH;
-//InputPort mTransparencyInput = PRIMARY_PORT;
-  InputPort mColorInput = PRIMARY_PORT;
-  InputPort mSecondaryVectorParameterInput = PRIMARY_PORT;
-  InputPort mSpringsMajorRadiusInput = PRIMARY_PORT;
-  InputPort mSpringsMinorRadiusInput = PRIMARY_PORT;
-  InputPort mSpringsPitchInput = PRIMARY_PORT;
+ // Render state flags.
+ bool mFlags[MAX_ACTION_FLAGS];
+ TransparencySortType mSortType = CONTINUOUS_SORT;
+ GlyphType mGlyphType = POINT_GLYPH;
+ // InputPort mTransparencyInput = PRIMARY_PORT;
+ InputPort mColorInput = PRIMARY_PORT;
+ InputPort mSecondaryVectorParameterInput = PRIMARY_PORT;
+ InputPort mSpringsMajorRadiusInput = PRIMARY_PORT;
+ InputPort mSpringsMinorRadiusInput = PRIMARY_PORT;
+ InputPort mSpringsPitchInput = PRIMARY_PORT;
 
-  Core::Datatypes::ColorRGB defaultColor;
+ Core::Datatypes::ColorRGB defaultColor;
 };
 
 
