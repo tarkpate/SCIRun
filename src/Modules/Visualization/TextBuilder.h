@@ -32,6 +32,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <Core/Datatypes/Color.h>
 #include <Graphics/Datatypes/GeometryImpl.h>
 #include <Modules/Visualization/share.h>
 
@@ -52,6 +53,7 @@ namespace SCIRun {
         std::string getFontName() const { return libName_; }
 
         void setColor(float r, float g, float b, float a);
+        void setColor(const Core::Datatypes::ColorRGB& rgb, float a);
 
         bool isReady() const { return isInit() && isValid(); }
 

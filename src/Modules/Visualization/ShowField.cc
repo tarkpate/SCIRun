@@ -25,18 +25,18 @@
    DEALINGS IN THE SOFTWARE.
 */
 
-
-#include <Modules/Visualization/ShowField.h>
-#include <Core/Datatypes/Geometry.h>
 #include <Core/Algorithms/Visualization/RenderFieldState.h>
-#include <Core/Datatypes/Legacy/Field/VMesh.h>
-#include <Core/Datatypes/Legacy/Field/Field.h>
-#include <Core/Datatypes/Legacy/Field/VField.h>
 #include <Core/Datatypes/Color.h>
 #include <Core/Datatypes/ColorMap.h>
-#include <Core/GeometryPrimitives/Vector.h>
+#include <Core/Datatypes/Geometry.h>
+#include <Core/Datatypes/Legacy/Field/Field.h>
+#include <Core/Datatypes/Legacy/Field/VField.h>
+#include <Core/Datatypes/Legacy/Field/VMesh.h>
 #include <Core/GeometryPrimitives/Tensor.h>
+#include <Core/GeometryPrimitives/Vector.h>
 #include <Graphics/Glyphs/GlyphGeom.h>
+#include <Modules/Visualization/ShowField.h>
+#include <Modules/Visualization/TextBuilder.h>
 
 using namespace SCIRun;
 using namespace Modules::Visualization;
@@ -131,6 +131,7 @@ public:
   float nodeTransparencyValue_ = 0.65f;
   std::string moduleId_;
   ModuleStateHandle state_;
+  TextBuilder textBuilder_;
 };
 }}}}
 
@@ -343,6 +344,7 @@ RenderState GeometryBuilder::getTextRenderState(boost::optional<boost::shared_pt
   renState.set(RenderState::USE_COLORMAP_ON_TEXT, useColorMap);
   renState.set(RenderState::USE_COLOR_CONVERT_ON_TEXT, rgbConversion);
   renState.set(RenderState::USE_DEFAULT_COLOR_TEXT, useDefaultColor);
+  renState.set(RenderState::USE_TRANSPARENCY, true);
 
   return renState;
 }
@@ -1090,11 +1092,9 @@ void GeometryBuilder::renderText(FieldHandle field,
   ColorMapHandle textureMap, coordinateMap;
   spiltColorMapToTextureAndCoordinates(colorMap, textureMap, coordinateMap);
 
-  if (fld->basis_order() < 0 || (fld->basis_order() == 0 && mesh->dimensionality() != 0) || state.get(RenderState::USE_DEFAULT_COLOR_TEXT))
-    colorScheme = ColorScheme::COLOR_UNIFORM;
-  else if (state.get(RenderState::USE_COLORMAP_ON_TEXT))
-    colorScheme = ColorScheme::COLOR_MAP;
-  else
+  if (fld->basis_order() < 0 || (fld->basis_order() == 0 && mesh->dimensionality() != 0) ||
+  state.get(RenderState::USE_DEFAULT_COLOR_TEXT)) colorScheme = ColorScheme::COLOR_UNIFORM; else if
+  (state.get(RenderState::USE_COLORMAP_ON_TEXT)) colorScheme = ColorScheme::COLOR_MAP; else
     colorScheme = ColorScheme::COLOR_IN_SITU;
 
   mesh->synchronize(Mesh::NODES_E);
@@ -1150,9 +1150,17 @@ void GeometryBuilder::renderText(FieldHandle field,
     ++eiter;
   }
 
-  glyphs.buildObject(*geom, uniqueNodeID, state.get(RenderState::USE_TRANSPARENT_NODES), nodeTransparencyValue_,
-    colorScheme, state, primIn, mesh->get_bounding_box(), true, textureMap);
   */
+  // glyphs.buildObject(*geom, uniqueID, true, nodeTransparencyValue_,
+    // colorScheme, state, primIn, mesh->get_bounding_box(), true, textureMap);
+  auto textSize = state_->getValue(TextSize).toInt();
+  if (textBuilder_.initialize(textSize))
+  {
+    if (textBuilder_.getFaceSize() != textSize)
+      textBuilder_.setFaceSize(textSize);
+    textBuilder_.setColor(ColorRGB(state_->getValue(DefaultTextColor).toString()), 1);
+    textBuilder_.printString("hello world...", Vector(0.0,0.0,0.0), Vector(0,0,0), id, *geom);
+  }
 }
 
 void ShowField::updateAvailableRenderOptions(FieldHandle field)

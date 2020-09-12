@@ -31,8 +31,8 @@
 #ifndef MODULES_VISUALIZATION_SHOW_FIELD_H
 #define MODULES_VISUALIZATION_SHOW_FIELD_H
 
-#include <Dataflow/Network/GeometryGeneratingModule.h>
 #include <Core/Thread/Interruptible.h>
+#include <Dataflow/Network/GeometryGeneratingModule.h>
 #include <Modules/Visualization/share.h>
 
 namespace SCIRun {

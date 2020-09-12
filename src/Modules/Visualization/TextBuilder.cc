@@ -33,6 +33,7 @@
 
 using namespace SCIRun;
 using namespace Modules::Visualization;
+using namespace Core::Datatypes;
 using namespace Core::Geometry;
 using namespace Graphics::Datatypes;
 
@@ -60,6 +61,10 @@ void TextBuilder::setColor(float r, float g, float b, float a)
   color_ = glm::vec4(r,g,b,a);
 }
 
+void TextBuilder::setColor(const ColorRGB& rgb, float a)
+{
+  color_ = glm::vec4(rgb.r(), rgb.g(), rgb.b(), a);
+}
 
 void TextBuilder::initFreeType(const std::string &libName, size_t size)
 {
