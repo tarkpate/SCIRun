@@ -63,7 +63,6 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
 
   auto eigvecs = t_.getEigenvectors();
   auto cross = eigvecs[0].cross(eigvecs[1]);
-  bool flipVertices = cross.dot(eigvecs[2]) < 2e-12;
 
   MandelVector tMandel = t_.mandel();
 
@@ -150,16 +149,8 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
         constructor.addVertex(offsetP + centerVector, nVector, ColorRGB(1.0, 1.0, 1.0));
       }
 
-      if (flipVertices)
-      {
-        constructor.addIndicesToOffset(0, 2, 1);
-        constructor.addIndicesToOffset(2, 3, 1);
-      }
-      else
-      {
-        constructor.addIndicesToOffset(0, 1, 2);
-        constructor.addIndicesToOffset(2, 1, 3);
-      }
+      constructor.addIndicesToOffset(0, 1, 2);
+      constructor.addIndicesToOffset(2, 1, 3);
     }
   }
   constructor.popIndicesNTimes(6);
@@ -423,7 +414,6 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   normalParams.B = 2.0 - params.B;
   auto eigvecs = t_.getEigenvectors();
   auto cross = eigvecs[0].cross(eigvecs[1]);
-  bool flipVertices = cross.dot(eigvecs[2]) < 2e-12;
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
@@ -461,16 +451,8 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
         constructor.addVertex(pVector, normal, color_);
       }
 
-      if (flipVertices)
-      {
-        constructor.addIndicesToOffset(0, 2, 1);
-        constructor.addIndicesToOffset(2, 3, 1);
-      }
-      else
-      {
-        constructor.addIndicesToOffset(0, 1, 2);
-        constructor.addIndicesToOffset(2, 1, 3);
-      }
+      constructor.addIndicesToOffset(0, 1, 2);
+      constructor.addIndicesToOffset(2, 1, 3);
     }
   }
   constructor.popIndicesNTimes(6);
