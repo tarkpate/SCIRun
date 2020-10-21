@@ -120,6 +120,7 @@ namespace Graphics {
     std::array<bool, size> linear;
     std::array<double, size> A;
     std::array<double, size> B;
+    std::array<Eigen::Vector3d, size> normEigvals;
   };
 
   class SCISHARE UncertaintyTensorOffsetSurfaceBuilder : public TensorGlyphBuilder
@@ -138,8 +139,8 @@ namespace Graphics {
     double evaluateSuperquadricImplPlanar(const Eigen::Vector3d& p, double A, double B);
     MandelVector getQn(const DifftValues& vals, const Eigen::Vector3d& p);
     double emphasis_ = 0.0;
-    const double h_ = 0.000001;
-    const double hHalf_ = 0.5 * h_;
+    double h_;// = 0.000001;
+    double hHalf_;// = 0.5 * h_;
   };
 }
 }

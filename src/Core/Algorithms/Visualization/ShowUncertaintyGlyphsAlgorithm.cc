@@ -66,6 +66,7 @@ class ShowUncertaintyGlyphsImpl
  private:
   void computeMeanTensors();
   Dyadic3DTensor computeMeanTensor(int index) const;
+  Dyadic3DTensor computeMeanLinearInvariant(int t) const;
   void computeCovarianceMatrices();
   void verifyData(const FieldList& fields);
   void getPoints(const FieldList& fields);
@@ -309,7 +310,8 @@ void ShowUncertaintyGlyphsImpl::computeMeanTensors()
 {
   meanTensors_ = std::vector<Dyadic3DTensor>(fieldSize_);
   for (int t = 0; t < fieldSize_; ++t)
-    meanTensors_[t] = computeMeanTensor(t);
+    // meanTensors_[t] = computeMeanTensor(t);
+    meanTensors_[t] = computeMeanLinearInvariant(t);
 }
 
 Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanTensor(int t) const
@@ -320,6 +322,72 @@ Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanTensor(int t) const
   sum = sum / (double)fieldCount_;
 
   return sum;
+}
+
+double frob(const Dyadic3DTensor& t)
+{
+  return sqrt((t * t.transpose()).trace());
+}
+
+// Mean calculation using Linear Invariant interpolation
+Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) const
+{
+  const static double sqrtThreeHalves = sqrt(1.5);
+  const static double threeSqrtSix = 3.0 * sqrt(6.0);
+
+  const static auto identity = Dyadic3DTensor(Eigen::Vector3d(1, 0, 0),
+                                              Eigen::Vector3d(0, 1, 0),
+                                              Eigen::Vector3d(0, 0, 1));
+  const static auto identityThird = identity / 3.0;
+
+  double K1 = 0.0;
+  double R2 = 0.0;
+  double R3 = 0.0;
+
+  for (int f = 0; f < fieldCount_; ++f)
+  {
+    std::cout << "tensor " << f << " " << tensors_[f][t] << "\n";
+    const auto trace = tensors_[f][t].trace();
+    K1 += trace;
+
+    const auto fro = frob(tensors_[f][t]);
+    std::cout << "fro " << fro << "\n";
+    const auto anisotropicDeviation = tensors_[f][t] - trace * identityThird;
+    const double anisotropicDeviationFro = frob(anisotropicDeviation);
+    std::cout << "deviation fro " << anisotropicDeviationFro << "\n";
+
+    R2 += sqrtThreeHalves * fro / anisotropicDeviationFro;
+    R3 += threeSqrtSix * (anisotropicDeviation / anisotropicDeviationFro).asMatrix().determinant();
+  }
+
+  std::cout << "R2 " << R2 << "\n";
+  // Equally weight all of the coeffecients
+  K1 /= fieldCount_;
+  R2 /= fieldCount_;
+  R3 /= fieldCount_;
+  std::cout << "K1 " << K1 << "\n";
+  std::cout << "R2 " << R2 << "\n";
+  std::cout << "R3 " << R3 << "\n";
+
+  const static double oneThird = 1.0 / 3.0;
+  Eigen::Vector3d eigvals;
+  const double arccosR3 = std::acos(R3);
+  std::cout << "arccosR3 " << arccosR3 << "\n";
+  std::cout << "1/3 " << oneThird << "\n";
+  std::cout << "part of it " << 2.0*R2*R2 << "\n";
+  std::cout << "part of it " << 3.0-2.0 * R2 * R2 << "\n";
+  std::cout << "part of it " << sqrt(3.0 - 2.0 * R2 * R2) << "\n";
+  const double x = oneThird * K1 +
+    (2.0 * K1 * R2) / (3.0 * sqrt(3.0 - 2.0 * std::pow(R2, 2.0)));
+  std::cout << "x " << x << "\n";
+  eigvals[0] = x * std::cos(arccosR3 * oneThird);
+  eigvals[1] = x * std::cos((arccosR3 - 2.0 * M_PI) * oneThird);
+  eigvals[2] = x * std::cos((arccosR3 + 2.0 * M_PI) * oneThird);
+  std::cout << "eigvals " << eigvals << "\n";
+
+  auto eigvecs = computeMeanTensor(t).getEigenvectors();
+
+  return Dyadic3DTensor(eigvecs, eigvals);
 }
 
 Tensor eigenTensorToScirunTensor(const Dyadic3DTensor& t)

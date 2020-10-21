@@ -333,6 +333,19 @@ namespace Core {
         return V;
       }
 
+      Number trace() const
+      {
+        double sum = 0.0;
+        for (auto i = 0; i < Dim; ++i)
+          sum += (*this)(i, i);
+        return sum;
+      }
+
+      DyadicTensorGeneric<Number, Dim> transpose() const
+      {
+        return DyadicTensorGeneric<Number, Dim>(this->asMatrix().transpose());
+      }
+
      protected:
       const int RANK_ = 2;
       mutable std::vector<VectorType> eigvecs_;

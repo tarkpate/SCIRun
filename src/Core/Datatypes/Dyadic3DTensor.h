@@ -47,6 +47,7 @@ namespace Core {
       using parent::operator=;
       using parent::operator==;
       using parent::reorderTensorValues;
+      using parent::trace;
 
       explicit Dyadic3DTensorGeneric(const std::initializer_list<VectorType>& eigvecs) : parent()
       {

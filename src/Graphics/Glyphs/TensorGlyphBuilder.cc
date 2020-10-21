@@ -46,7 +46,11 @@ Vector makeSCIRunVector(const Eigen::Vector3d& vec)
 UncertaintyTensorOffsetSurfaceBuilder::UncertaintyTensorOffsetSurfaceBuilder(
     const Core::Datatypes::Dyadic3DTensor& t, const Core::Geometry::Point& center, double emphasis)
     : TensorGlyphBuilder(t, center), emphasis_(emphasis)
-{}
+{
+  std::cout << "fro " << t.frobeniusNorm() << "\n";
+  h_ = 0.000001;// * t.frobeniusNorm();
+  hHalf_ = h_ * 0.5;
+}
 
 void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
     GlyphConstructor& constructor, const Eigen::Matrix<double, 6, 6>& covarianceMatrix)
@@ -89,7 +93,7 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
   Vector pseudoInvVector;
   MandelVector qn;
   for (int i = 0; i < 3; ++i)
-    pseudoInvVector[i] = 1 / pseudoInv[i];
+    pseudoInvVector[i] = 1.0 / pseudoInv[i];
 
   DifftValues difftVals;
   precalculateDifftValues(difftVals, tMandel);
@@ -133,8 +137,11 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
         }
         auto eigP = Eigen::Vector3d(p.x(), p.y(), p.z());
         auto qn = getQn(difftVals, eigP);
+
+        // std::cout << "h_ " << h_ << "\n"; 
         qn /= h_;
         qn /= nn.norm();
+        // std::cout << "qn norm " << qn.norm() << "\n";
         double q = std::sqrt(
             std::abs((qn.transpose().eval() * (covarianceMatrix * qn).eval()).eval().value()));
         auto n = nn / nn.norm();
@@ -143,6 +150,7 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
         Vector normal = Vector(evaluateSuperquadricPoint(linear, normalParams));
         normal = rotate * normal;
         normal.safe_normalize();
+        // std::cout << "q " << q << "\n";
 
         Vector offsetP = p + q * normal;
 
@@ -172,17 +180,18 @@ void UncertaintyTensorOffsetSurfaceBuilder::precalculateDifftValues(
       const MandelVector& tMandel =
           (s == 0) ? MandelVector(t + finiteDiff) : MandelVector(t - finiteDiff);
 
-      auto t = symmetricTensorFromMandel(tMandel);
-      double cl = t.linearCertainty();
-      double cp = t.planarCertainty();
+      auto newT = symmetricTensorFromMandel(tMandel);
+      double cl = newT.linearCertainty();
+      double cp = newT.planarCertainty();
       vals.linear[index] = cl >= cp;
       auto AAndB = getAAndB(cl, cp, vals.linear[index], emphasis_);
       vals.A[index] = AAndB.first;
       vals.B[index] = AAndB.second;
-      vals.rotateInverse[index] = t.getEigenvectorsAsMatrix().inverse();
-      vals.pseudoInv[index] = t.getEigenvalues();
+      vals.rotateInverse[index] = newT.getEigenvectorsAsMatrix().inverse();
+      vals.pseudoInv[index] = newT.getEigenvalues();
       for (int d = 0; d < 3; ++d)
-        vals.pseudoInv[index][d] = 1 / vals.pseudoInv[index][d];
+        vals.pseudoInv[index][d] = 1.0 / vals.pseudoInv[index][d];
+      vals.normEigvals[index] = newT.getNormalizedEigenvalues();
     }
     finiteDiff(i) = 0.0;
   }
