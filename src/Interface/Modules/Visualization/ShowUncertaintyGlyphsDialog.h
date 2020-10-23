@@ -18,6 +18,8 @@ namespace Gui {
     ShowUncertaintyGlyphsDialog(const std::string& name,
                                 SCIRun::Dataflow::Networks::ModuleStateHandle state,
                                 QWidget* parent = 0);
+  private:
+    void setupTensorsTab();
     //this function would be from pulling data from module,
     // usually to change the UI.
     // virtual void pull() override;

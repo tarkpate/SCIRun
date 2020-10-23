@@ -27,11 +27,13 @@
 
 #include <Modules/Visualization/ShowUncertaintyGlyphs.h>
 #include <Core/Algorithms/Visualization/ShowUncertaintyGlyphsAlgorithm.h>
+// #include <Core/Algorithms/Base/AlgorithmPreconditions.h>
 #include <Core/Datatypes/Legacy/Field/Field.h>
 
 using namespace SCIRun;
 using namespace Core::Datatypes;
 using namespace Modules::Visualization;
+using namespace Core::Algorithms;
 using namespace Core::Algorithms::Visualization;
 
 MODULE_INFO_DEF(ShowUncertaintyGlyphs, Visualization, SCIRun);
@@ -65,3 +67,17 @@ void ShowUncertaintyGlyphs::execute()
 }
 
 }}}
+
+const AlgorithmParameterName ShowUncertaintyGlyphs::ShowTensorTab("ShowTensorTab");
+const AlgorithmParameterName ShowUncertaintyGlyphs::ShowTensors("ShowTensors");
+// const AlgorithmParameterName ShowFieldGlyphs::TensorsDisplayType("TensorsDisplayType");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsColoring("TensorsColoring");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsColoringDataInput("TensorsColoringDataInput");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsTransparency("TensorsTransparency");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsUniformTransparencyValue("TensorsUniformTransparencyValue");
+const AlgorithmParameterName ShowUncertaintyGlyphs::SuperquadricEmphasis("SuperquadricEmphasis");
+const AlgorithmParameterName ShowUncertaintyGlyphs::NormalizeTensors("NormalizeTensors");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsScale("TensorsScale");
+const AlgorithmParameterName ShowUncertaintyGlyphs::RenderTensorsBelowThreshold("RenderTensorsBelowThreshold");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsThreshold("TensorsThreshold");
+const AlgorithmParameterName ShowUncertaintyGlyphs::TensorsResolution("TensorsResolution");
