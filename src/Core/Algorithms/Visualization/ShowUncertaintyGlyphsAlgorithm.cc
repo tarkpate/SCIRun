@@ -342,48 +342,55 @@ Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) cons
 
   double K1 = 0.0;
   double R2 = 0.0;
+  double R2temp = 0.0;
   double R3 = 0.0;
 
   for (int f = 0; f < fieldCount_; ++f)
   {
-    std::cout << "tensor " << f << " " << tensors_[f][t] << "\n";
+    // std::cout << "tensor " << f << " " << tensors_[f][t] << "\n";
     const auto trace = tensors_[f][t].trace();
+    // std::cout << "trace " << trace << "\n";
+    auto trThird = trace * identityThird;
+    // std::cout << "trThird " << trThird << "\n";
     K1 += trace;
 
-    const auto fro = frob(tensors_[f][t]);
-    std::cout << "fro " << fro << "\n";
+    const auto fro = tensors_[f][t].frobeniusNorm();
+    // std::cout << "fro " << fro << "\n";
+    auto e = tensors_[f][t].getEigenvalues();
     const auto anisotropicDeviation = tensors_[f][t] - trace * identityThird;
-    const double anisotropicDeviationFro = frob(anisotropicDeviation);
-    std::cout << "deviation fro " << anisotropicDeviationFro << "\n";
+    const double anisotropicDeviationFro = anisotropicDeviation.frobeniusNorm();
+    // std::cout << "deviation fro " << anisotropicDeviationFro << "\n";
 
-    R2 += sqrtThreeHalves * fro / anisotropicDeviationFro;
+    R2 += sqrtThreeHalves * anisotropicDeviationFro / fro;
+    R2temp += tensors_[f][t].fractionalAnisotropy();
     R3 += threeSqrtSix * (anisotropicDeviation / anisotropicDeviationFro).asMatrix().determinant();
   }
 
-  std::cout << "R2 " << R2 << "\n";
   // Equally weight all of the coeffecients
   K1 /= fieldCount_;
   R2 /= fieldCount_;
+  R2temp /= fieldCount_;
   R3 /= fieldCount_;
-  std::cout << "K1 " << K1 << "\n";
+  // std::cout << "K1 " << K1 << "\n";
   std::cout << "R2 " << R2 << "\n";
-  std::cout << "R3 " << R3 << "\n";
+  std::cout << "R2 new " << R2temp << "\n";
+  // std::cout << "R3 " << R3 << "\n";
 
   const static double oneThird = 1.0 / 3.0;
   Eigen::Vector3d eigvals;
   const double arccosR3 = std::acos(R3);
-  std::cout << "arccosR3 " << arccosR3 << "\n";
-  std::cout << "1/3 " << oneThird << "\n";
-  std::cout << "part of it " << 2.0*R2*R2 << "\n";
-  std::cout << "part of it " << 3.0-2.0 * R2 * R2 << "\n";
-  std::cout << "part of it " << sqrt(3.0 - 2.0 * R2 * R2) << "\n";
+  // std::cout << "arccosR3 " << arccosR3 << "\n";
+  // std::cout << "1/3 " << oneThird << "\n";
+  // std::cout << "part of it " << 2.0*R2*R2 << "\n";
+  // std::cout << "part of it " << 3.0-2.0 * R2 * R2 << "\n";
+  // std::cout << "part of it " << sqrt(3.0 - 2.0 * R2 * R2) << "\n";
   const double x = oneThird * K1 +
     (2.0 * K1 * R2) / (3.0 * sqrt(3.0 - 2.0 * std::pow(R2, 2.0)));
-  std::cout << "x " << x << "\n";
+  // std::cout << "x " << x << "\n";
   eigvals[0] = x * std::cos(arccosR3 * oneThird);
   eigvals[1] = x * std::cos((arccosR3 - 2.0 * M_PI) * oneThird);
   eigvals[2] = x * std::cos((arccosR3 + 2.0 * M_PI) * oneThird);
-  std::cout << "eigvals " << eigvals << "\n";
+  // std::cout << "eigvals " << eigvals << "\n";
 
   auto eigvecs = computeMeanTensor(t).getEigenvectors();
 

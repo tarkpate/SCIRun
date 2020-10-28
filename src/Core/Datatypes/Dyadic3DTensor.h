@@ -187,6 +187,13 @@ namespace Core {
         parent::setEigens(eigvecs, eigvals);
       }
 
+      Number fractionalAnisotropy() const
+      {
+        const static Number sqrtHalf = std::sqrt(0.5);
+        const auto eigvals = parent::getEigenvalues();
+        return sqrtHalf * std::sqrt(std::pow(eigvals[0] - eigvals[1], 2) + std::pow(eigvals[1] - eigvals[2], 2) + std::pow(eigvals[2] - eigvals[0], 2)) / parent::frobeniusNorm();
+      }
+
      private:
       const size_t DIM_ = 3;
     };
