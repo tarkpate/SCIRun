@@ -47,6 +47,56 @@ std::vector<Eigen::Vector3d> getEigvecs()
   return eigvecs;
 }
 
+TEST(Dyadic3DTensorTest, Eigs)
+{
+  Eigen::Matrix3d mat;
+  mat << 3.50000, 0.86603, 0.00000,
+    0.86603, 2.50000, 0.00000,
+    0.00000, 0.00000, 1.00000;
+
+  auto es = Eigen::EigenSolver<Eigen::Matrix3d>(mat);
+  auto vecs = es.eigenvectors();
+  auto vals = es.eigenvalues();
+
+  std::cout << "V:\n" << vecs << "\n";
+  std::cout << "D:\n" << vals << "\n";
+
+  auto rec = vecs*vals.asDiagonal()*vecs.transpose();
+  std::cout << "V*D*V'\n" << rec << "\n";
+
+  // for (int i = 0; i < 3; ++i)
+  // {
+    // std::cout << "eigvec " << i << ":\n";
+    // for (int j = 0; j < 3; ++j)
+      // std::cout << vecs(j,i).real() << ", ";
+    // std::cout << "\n";
+  // }
+}
+
+TEST(Dyadic3DTensorTest, Rotation)
+{
+  double theta = 20;
+  Eigen::Matrix3d mat;
+  mat << 5, 0, 0, 0, 1, 0, 0, 0, 1;
+  Eigen::Matrix3d rot;
+  rot << std::cos(theta), -std::sin(theta), 0, std::sin(theta), std::cos(theta), 0, 0, 0, 1;
+  auto mat2 = rot * mat;
+  Dyadic3DTensor t(mat);
+  Dyadic3DTensor t2(mat2);
+  std::cout << "\n\n";
+  std::cout << "mat: "<< mat << "\n";
+  std::cout << "eigvals: " << t.getEigenvalues() << "\n";
+  auto eigvecs = t.getEigenvectors();
+  for (auto e : eigvecs) std::cout << "eigvec: " << e << "\n";
+  std::cout << "\n\n";
+
+  std::cout << "mat2: "<< mat2 << "\n";
+  std::cout << "eigvals 2: " << t2.getEigenvalues() << "\n";
+  auto eigvecs2 = t.getEigenvectors();
+  for (auto e : eigvecs2) std::cout << "eigvec 2: " << e << "\n";
+  std::cout << "\n\n";
+}
+
 TEST(Dyadic3DTensorTest, ConstructTensorWithEigenColumnMatrices1)
 {
   Dyadic3DTensor t(getEigvecs());
@@ -172,6 +222,21 @@ TEST(DyadicTensorTest, CanConstructWithMatrix)
   ASSERT_EQ("[1 2 3 2 4 5 3 5 6]", ss.str());
 }
 
+TEST(Dyadic3DTensorTest, ConstructTensorWithEigenVectors)
+{
+  std::vector<Eigen::Vector3d> eigvecs = {
+    Eigen::Vector3d(), Eigen::Vector3d(), Eigen::Vector3d()};
+  int n = 0;
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 3; ++j) eigvecs[i][j] = ++n;
+  Dyadic3DTensor t(eigvecs);
+  std::stringstream ss;
+  ss << t;
+
+  ASSERT_EQ("[1 2 3 4 5 6 7 8 9]", ss.str());
+}
+
+/*
 TEST(DyadicTensorTest, ConstructTensorWithEigenVectors)
 {
   std::vector<Eigen::Vector4d> eigvecs = {
@@ -186,6 +251,7 @@ TEST(DyadicTensorTest, ConstructTensorWithEigenVectors)
 
   ASSERT_EQ("[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]", ss.str());
 }
+*/
 
 TEST(DyadicTensorTest, StringConversion)
 {
@@ -257,6 +323,7 @@ TEST(DyadicTensorTest, Equivalent)
   ASSERT_TRUE(t2 != t3);
 }
 
+/*
 TEST(DyadicTensorTest, DifferentDimensionsNotEquivalent)
 {
   Dyadic3DTensor t(
@@ -266,6 +333,7 @@ TEST(DyadicTensorTest, DifferentDimensionsNotEquivalent)
 
   ASSERT_DEATH(t != t2, "");
 }
+*/
 
 TEST(DyadicTensorTest, EqualsOperatorTensor)
 {
@@ -292,6 +360,7 @@ TEST(DyadicTensorTest, EqualsOperatorDouble)
   ASSERT_TRUE(t == t2);
 }
 
+/*
 TEST(DyadicTensorTest, PlusEqualsTensorOperator)
 {
   Dyadic2DTensor t({Eigen::Vector2d({2, 8}), Eigen::Vector2d({5, 3})});
@@ -415,6 +484,7 @@ TEST(DyadicTensorTest, SetEigensFail1)
   Dyadic2DTensor t({Eigen::Vector2d({3, 0}), Eigen::Vector2d({0, 6})});
   ASSERT_ANY_THROW(t.setEigens({Eigen::Vector2d({0, 1}), Eigen::Vector2d({1, 0})}, {3, 4, 5}));
 }
+*/
 
 TEST(DyadicTensorTest, EigenSolver)
 {

@@ -108,30 +108,12 @@ enum FieldDataType
 GeometryHandle ShowUncertaintyGlyphsImpl::run(
     const GeometryIDGenerator& idgen, const FieldList& fields)
 {
-  // auto start = time(&timer);
   getPoints(fields);
-  // std::cout << "time to get points " << time(&timer) - start << "\n";
-  // start = time(&timer);
-
   verifyData(fields);
-  // std::cout << "time to verify data " << time(&timer) - start << "\n";
-  // start = time(&timer);
-
   getTensors(fields);
-  // std::cout << "time to get tensors " << time(&timer) - start << "\n";
-  // start = time(&timer);
-
   computeMeanTensors();
-  // std::cout << "time to compute mean tensors " << time(&timer) - start << "\n";
-  // start = time(&timer);
-
   computeCovarianceMatrices();
-  // std::cout << "time to compute covariance tensors " << time(&timer) - start << "\n";
-  // start = time(&timer);
-
   computeOffsetSurface();
-  // std::cout << "time to compute offset surface " << time(&timer) - start << "\n";
-  // start = time(&timer);
 
   // Creates id
   std::string idname = "ShowUncertaintyGlyphs";
@@ -152,8 +134,6 @@ GeometryHandle ShowUncertaintyGlyphsImpl::run(
   auto geom(boost::make_shared<GeometryObjectSpire>(idgen, idname, true));
   constructor_.buildObject(*geom, geom->uniqueID(), true, 0.5, ColorScheme::COLOR_UNIFORM, renState,
       primIn, vmesh->get_bounding_box(), true, nullptr);
-  // std::cout << "time to make geom " << time(&timer) - start << "\n";
-  // start = time(&timer);
 
   return geom;
 }
@@ -179,23 +159,11 @@ void ShowUncertaintyGlyphsImpl::computeCovarianceMatrices()
 
 void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
 {
-  const static double h = 0.000001;
-  const static double hHalf = 0.5 * h;
-  Point origin = Point(0, 0, 0);
-
-  auto start = std::chrono::system_clock::now();
-  long time = 0;
   for (int f = 0; f < fieldSize_; ++f)
   {
-    auto start = std::chrono::system_clock::now();
     UncertaintyTensorOffsetSurfaceBuilder builder(meanTensors_[f], points_[0][f], emphasis_);
-    builder.setResolution(50);
+    builder.setResolution(20);
     builder.generateOffsetSurface(constructor_, covarianceMatrices_[f]);
-    // std::cout << "offset " << f << " gen'd\n";
-    time = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now() - start)
-                    .count();
-    std::cout << "total offset surf time " << time << "\n";
   }
 }
 
@@ -302,16 +270,37 @@ void ShowUncertaintyGlyphsImpl::getTensors(const FieldList& fields)
     {
       vfield->get_value(temp, v);
       tensors_[f][v] = scirunTensorToEigenTensor(temp);
+      // std::cout << "tensr: " << tensors_[f][v] <<"\n";
     }
   }
+}
+
+Tensor eigenTensorToScirunTensor(const Dyadic3DTensor& t)
+{
+  return Tensor(t(0, 0), t(1, 0), t(2, 0), t(1, 1), t(2, 1), t(2, 2));
 }
 
 void ShowUncertaintyGlyphsImpl::computeMeanTensors()
 {
   meanTensors_ = std::vector<Dyadic3DTensor>(fieldSize_);
   for (int t = 0; t < fieldSize_; ++t)
-    // meanTensors_[t] = computeMeanTensor(t);
-    meanTensors_[t] = computeMeanLinearInvariant(t);
+  // meanTensors_[t] = computeMeanLinearInvariant(t);
+    meanTensors_[t] = computeMeanTensor(t);
+
+  // auto eigvecs = meanTensors_[0].getEigenvectors();
+  // auto eigvals = meanTensors_[0].getEigenvalues();
+  auto sciT = eigenTensorToScirunTensor(meanTensors_[0]);
+  Vector e0,e1,e2;
+  sciT.get_eigenvectors(e0, e1, e2);
+  // std::cout << "e0 " << e0 << "\n";
+  // std::cout << "e1 " << e1 << "\n";
+  // std::cout << "e2 " << e2 << "\n";
+  // for (int i = 0; i < 3; ++i) std::cout << "eigvec " << i << ": " << eigvecs[i] << "\n";
+  // for (int i = 0; i < 3; ++i) std::cout << "eigval " << i << ": " << eigvals[i] << "\n";
+  // std::cout << "\n\n\n\n\n\n";
+  // Eigen::Matrix3d diagEig = eigvals.asDiagonal();
+  // std::cout << "D: " << diagEig << "\n";
+  // std::cout << "V: " << meanTensors_[0].getEigenvectorsAsMatrix() << "\n";
 }
 
 Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanTensor(int t) const
@@ -332,75 +321,53 @@ double frob(const Dyadic3DTensor& t)
 // Mean calculation using Linear Invariant interpolation
 Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) const
 {
+  const static double oneThird = 1.0 / 3.0;
   const static double sqrtThreeHalves = sqrt(1.5);
   const static double threeSqrtSix = 3.0 * sqrt(6.0);
 
   const static auto identity = Dyadic3DTensor(Eigen::Vector3d(1, 0, 0),
                                               Eigen::Vector3d(0, 1, 0),
                                               Eigen::Vector3d(0, 0, 1));
-  const static auto identityThird = identity / 3.0;
+  const static auto identityThird = oneThird * identity;
 
   double K1 = 0.0;
   double R2 = 0.0;
-  double R2temp = 0.0;
   double R3 = 0.0;
 
   for (int f = 0; f < fieldCount_; ++f)
   {
-    // std::cout << "tensor " << f << " " << tensors_[f][t] << "\n";
     const auto trace = tensors_[f][t].trace();
-    // std::cout << "trace " << trace << "\n";
     auto trThird = trace * identityThird;
-    // std::cout << "trThird " << trThird << "\n";
     K1 += trace;
 
     const auto fro = tensors_[f][t].frobeniusNorm();
-    // std::cout << "fro " << fro << "\n";
-    auto e = tensors_[f][t].getEigenvalues();
-    const auto anisotropicDeviation = tensors_[f][t] - trace * identityThird;
+    const auto anisotropicDeviation = tensors_[f][t] - trThird;
     const double anisotropicDeviationFro = anisotropicDeviation.frobeniusNorm();
-    // std::cout << "deviation fro " << anisotropicDeviationFro << "\n";
 
     R2 += sqrtThreeHalves * anisotropicDeviationFro / fro;
-    R2temp += tensors_[f][t].fractionalAnisotropy();
     R3 += threeSqrtSix * (anisotropicDeviation / anisotropicDeviationFro).asMatrix().determinant();
   }
 
   // Equally weight all of the coeffecients
   K1 /= fieldCount_;
   R2 /= fieldCount_;
-  R2temp /= fieldCount_;
   R3 /= fieldCount_;
-  // std::cout << "K1 " << K1 << "\n";
-  std::cout << "R2 " << R2 << "\n";
-  std::cout << "R2 new " << R2temp << "\n";
-  // std::cout << "R3 " << R3 << "\n";
 
-  const static double oneThird = 1.0 / 3.0;
-  Eigen::Vector3d eigvals;
   const double arccosR3 = std::acos(R3);
-  // std::cout << "arccosR3 " << arccosR3 << "\n";
-  // std::cout << "1/3 " << oneThird << "\n";
-  // std::cout << "part of it " << 2.0*R2*R2 << "\n";
-  // std::cout << "part of it " << 3.0-2.0 * R2 * R2 << "\n";
-  // std::cout << "part of it " << sqrt(3.0 - 2.0 * R2 * R2) << "\n";
-  const double x = oneThird * K1 +
-    (2.0 * K1 * R2) / (3.0 * sqrt(3.0 - 2.0 * std::pow(R2, 2.0)));
-  // std::cout << "x " << x << "\n";
-  eigvals[0] = x * std::cos(arccosR3 * oneThird);
-  eigvals[1] = x * std::cos((arccosR3 - 2.0 * M_PI) * oneThird);
-  eigvals[2] = x * std::cos((arccosR3 + 2.0 * M_PI) * oneThird);
-  // std::cout << "eigvals " << eigvals << "\n";
+
+  Eigen::Vector3d eigvals;
+  const double x = oneThird * K1;
+  const double y = (2.0 * K1 * R2) / (3.0 * sqrt(3.0 - 2.0 * std::pow(R2, 2.0)));
+  eigvals[0] = x + y * std::cos(arccosR3 * oneThird);
+  eigvals[1] = x + y * std::cos((arccosR3 - 2.0 * M_PI) * oneThird);
+  eigvals[2] = x + y * std::cos((arccosR3 + 2.0 * M_PI) * oneThird);
 
   auto eigvecs = computeMeanTensor(t).getEigenvectors();
+  auto ret = Dyadic3DTensor(eigvecs, eigvals);
 
-  return Dyadic3DTensor(eigvecs, eigvals);
+  return ret;
 }
 
-Tensor eigenTensorToScirunTensor(const Dyadic3DTensor& t)
-{
-  return Tensor(t(0, 0), t(1, 0), t(2, 0), t(1, 1), t(2, 1), t(2, 2));
-}
 
 FieldHandle ShowUncertaintyGlyphsImpl::getMeanTensors() const
 {

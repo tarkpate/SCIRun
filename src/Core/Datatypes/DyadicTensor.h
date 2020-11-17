@@ -112,9 +112,9 @@ namespace Core {
 
       explicit DyadicTensorGeneric(const MatrixType& mat)
       {
-        for (size_t i = 0; i < Dim; ++i)
-          for (size_t j = 0; j < Dim; ++j)
-            if (mat(i, j) != mat(j, i)) THROW_INVALID_ARGUMENT("Input matrix must be symmetric.");
+        // for (size_t i = 0; i < Dim; ++i)
+          // for (size_t j = 0; j < Dim; ++j)
+            // if (mat(i, j) != mat(j, i)) THROW_INVALID_ARGUMENT("Input matrix must be symmetric.");
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
             (*this)(index(i), index(j)) = mat(index(i), index(j));
@@ -354,6 +354,7 @@ namespace Core {
 
       void buildEigens() const
       {
+        // std::cout << "buildEigens()\n";
         if (haveEigens_) return;
 
         auto es = Eigen::EigenSolver<MatrixType>(this->asMatrix());
@@ -368,7 +369,7 @@ namespace Core {
           eigvals_[i] = vals(i).real();
           eigvecs_[i] = VectorType(Dim);
           for (size_t j = 0; j < Dim; ++j)
-            eigvecs_[i][j] = vecs(i, j).real();
+            eigvecs_[i][j] = vecs(j, i).real();
         }
 
         haveEigens_ = true;
@@ -420,11 +421,16 @@ namespace Core {
       {
         auto D = eigvals_.asDiagonal();
         auto V = this->getEigenvectorsAsMatrix();
+        // std::cout << "D " << D.diagonal()(0) << " " << D.diagonal()(1) << " " << D.diagonal()(2) << "\n";
+        // std::cout << "V " << V << "\n";
+        // std::cout << "V.inv " << V.inverse() << "\n";
 
-        auto mat = V * D * V.inverse();
+        // std::cout << "D*V.inv " << (D * V.inverse()) << "\n";
+        auto mat = V * (D * V.transpose());
+        // std::cout << "V*D*V.inv " << mat << "\n";
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
-            (*this)(index(j), index(i)) = mat(i, j);
+            (*this)(index(j), index(i)) = mat(j, i);
       }
 
       long int index(size_t i) const { return static_cast<long int>(i); }

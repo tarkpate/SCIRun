@@ -148,6 +148,7 @@ namespace SCIRun {
           double znear, double zfar,
           int xres, int yres);
 
+        Transform transpose() const;
         void invert();
         bool inv_valid() { return inverse_valid; }
         void set_inv_valid(bool iv) { inverse_valid = iv; }

@@ -71,9 +71,9 @@ namespace Graphics {
     void generateEllipsoid(GlyphConstructor& constructor, bool half);
     void generateBox(GlyphConstructor& constructor);
 
-    Core::Geometry::Point evaluateSuperquadricPointLinear(const SuperquadricPointParams& params);
-    Core::Geometry::Point evaluateSuperquadricPointPlanar(const SuperquadricPointParams& params);
-    Core::Geometry::Point evaluateSuperquadricPoint(
+    Core::Geometry::Vector evaluateSuperquadricPointLinear(const SuperquadricPointParams& params);
+    Core::Geometry::Vector evaluateSuperquadricPointPlanar(const SuperquadricPointParams& params);
+    Core::Geometry::Vector evaluateSuperquadricPoint(
         bool linear, const SuperquadricPointParams& params);
     Core::Geometry::Point evaluateEllipsoidPoint(EllipsoidPointParams& params);
 
@@ -115,8 +115,9 @@ namespace Graphics {
     const static size_t size = 12;
 
    public:
-    std::array<Eigen::Vector3d, size> pseudoInv;
-    std::array<Eigen::Matrix3d, size> rotateInverse;
+    std::array<Eigen::Matrix3d, size> scaleInv;
+    std::array<Eigen::Matrix3d, size> rotateTranspose;
+    std::array<Eigen::Matrix3d, size> undoScaleAndRotate;
     std::array<bool, size> linear;
     std::array<double, size> A;
     std::array<double, size> B;
@@ -141,6 +142,11 @@ namespace Graphics {
     double emphasis_ = 0.0;
     double h_;// = 0.000001;
     double hHalf_;// = 0.5 * h_;
+
+    //temp
+    double diffT(const Eigen::Matrix<double, 6, 1>& s1,
+                 const Eigen::Matrix<double, 6, 1>& s2,
+                 const Eigen::Vector3d& p, double emphasis);
   };
 }
 }
