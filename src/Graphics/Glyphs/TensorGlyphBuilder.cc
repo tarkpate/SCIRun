@@ -53,143 +53,33 @@ UncertaintyTensorOffsetSurfaceBuilder::UncertaintyTensorOffsetSurfaceBuilder(
   hHalf_ = h_ * 0.5;
 }
 
-/* TODO remove. this is for testing purposes
-double UncertaintyTensorOffsetSurfaceBuilder::diffT(const MandelVector& s1,
-                                                    const MandelVector& s2,
-                                                    const Eigen::Vector3d& p, double emphasis)
-{
-
-  auto t1 = symmetricTensorFromMandel(s1);
-  auto t2 = symmetricTensorFromMandel(s2);
-
-  // std::cout << "T1: " << t1 <<"\n";
-  // std::cout << "T2: " << t2 <<"\n";
-  // std::cout << "t1 eigvals: " << t1.getEigenvalues() <<"\n";
-  // std::cout << "t2 eigvals: " << t2.getEigenvalues() <<"\n";
-
-  auto cl1 = t1.linearCertainty();
-  auto cp1 = t1.planarCertainty();
-  // std::cout << "cl1: " << std::setprecision(10) << cl1 <<"\n";
-  // std::cout << "cp1: " << std::setprecision(10) << cp1 <<"\n";
-
-  auto cl2 = t2.linearCertainty();
-  auto cp2 = t2.planarCertainty();
-  // std::cout << "cl2: " << std::setprecision(10) << cl2 <<"\n";
-  // std::cout << "cp2: " << std::setprecision(10) << cp2 <<"\n";
-
-  double A1, B1, A2, B2;
-
-  bool linear1 = (cl1 > cp1) || ((std::abs(cl1) - std::abs(cp1) > 0.00001));
-  bool linear2 = (cl2 > cp2) || ((std::abs(cl2) - std::abs(cp2) > 0.00001));
-  if(linear1)  {
-    A1 = GGU::spow((1.0-cp1), emphasis);
-    B1 = GGU::spow((1.0-cl1), emphasis);
-  }
-  else
-  {
-    A1 = GGU::spow((1.0-cl1), emphasis);
-    B1 = GGU::spow((1.0-cp1), emphasis);
-  }
-  if(linear2)
-  {
-    A2 = GGU::spow((1.0-cp2), emphasis);
-    B2 = GGU::spow((1.0-cl2), emphasis);
-  }
-  else
-  {
-    A2 = GGU::spow((1.0-cl2), emphasis);
-    B2 = GGU::spow((1.0-cp2), emphasis);
-  }
-
-
-  // std::cout << std::scientific;
-  const Eigen::Vector3d newP1 = t1.getEigenvalues().asDiagonal().inverse() * t1.getEigenvectorsAsMatrix().transpose() * p;
-  const Eigen::Vector3d newP2 = t2.getEigenvalues().asDiagonal().inverse() * t2.getEigenvectorsAsMatrix().transpose() * p;
-  // std::cout << "newP1: " << newP1 << "\n";
-  // std::cout << "A1: " << A1 << "\n";
-  // std::cout << "B1: " << B1 << "\n";
-  // std::cout << "newP2: " << newP2 << "\n";
-  // std::cout << "newP2.x(): " << newP2.x() << "\n";
-  // std::cout << "abs(newP2.x()): " << std::abs(newP2.x()) << "\n";
-  // std::cout << "A2: " << A2 << "\n";
-  // std::cout << "B2: " << B2 << "\n";
-
-  auto g1 = evaluateSuperquadricImpl(linear1, newP1, A1, B1);
-  auto g2 = evaluateSuperquadricImpl(linear2, newP2, A2, B2);
-
-  // std::cout << "newP2: " << newP2 << "\n";
-  // std::cout << "newP2.x(): " << newP2.x() << "\n";
-  // std::cout << "abs(newP2.x()): " << std::abs(newP2.x()) << "\n";
-  // auto g2 = GGU::spow(GGU::spow(abs(newP2.x()), 2.0/A2) + GGU::spow(abs(newP2.y()), 2.0/A2), A2/B2)
-    // + GGU::spow(abs(newP2.z()), 2.0/B2) - 1.0;
-
-  // std::cout << "newP2: " << newP2 << "\n";
-  // std::cout << "newP2.x(): " << newP2.x() << "\n";
-  // std::cout << "abs(newP2.x()): " << std::abs(newP2.x()) << "\n";
-  // std::cout << "TEST p1 with newP2: " << std::pow(std::abs(newP2.x()), 2.0 / A2) << "\n";
-  // std::cout << "TEST p1 with 0: " << std::pow(std::abs(0), 2.0 / A2) << "\n";
-  // std::cout << "TEST p1 1: " << std::pow(std::abs(newP2.y()), 2.0 / A2) << "\n";
-  // std::cout << "A2/B2: " << A2/B2 << "\n";
-  // std::cout << "TEST p1: "
-            // << std::pow(std::pow(std::abs(newP2.x()), 2.0 / A2) +
-                            // std::pow(std::abs(newP2.y()), 2.0 / A2),
-                   // A2 / B2)
-            // << "\n";
-  // std::cout << "TEST p2: " << std::pow(std::abs(newP2.z()), 2 / B2) << "\n";
-
-  // std::cout << "TEST: " << std::pow(std::pow(std::abs(newP2.x()), 2.0/A2) + std::pow(std::abs(newP2.y()), 2.0/A2), A2/B2) + std::pow(std::abs(newP2.z()), 2/B2) - 1.0 << "\n";
-  // std::cout << "g1: " << g1 << "\n";
-  // std::cout << "g2: " << g2 << "\n";
-  // std::cout << "g1-g2: " << g1-g2 << "\n";
-
-  return g1-g2;
-}
-*/
-
 void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
     GlyphConstructor& constructor, const Eigen::Matrix<double, 6, 6>& covarianceMatrix)
 {
-  // auto start = std::chrono::system_clock::now();
-  // long time = 0;
-  // Point origin = Point(0, 0, 0);
   Vector centerVector = Vector(center_);
 
-  t_.makePositive(true, false);
+  t_.makePositive(false);
+  t_.setDescendingRHSOrder();
   computeTransforms();
   postScaleTransforms();
   computeSinCosTable(false);
 
   std::vector<Eigen::Vector3d> eigvecs = t_.getEigenvectors();
-  // std::cout << "V: " << t_.getEigenvectorsAsMatrix() << "\n";
-  // std::cout << "V[0]: " << t_.getEigenvector(0) << "\n";
-  // auto cross = eigvecs[0].cross(eigvecs[1]);
-
   MandelVector tMandel = t_.mandel();
 
-  Eigen::Vector3d a(1,2,3);
-  Eigen::Vector3d b = a.asDiagonal().inverse().diagonal();
-
-  // const Transform rotate = Transform(Point(0, 0, 0), makeSCIRunVector(eigvecs[0]),
-      // makeSCIRunVector(eigvecs[1]), makeSCIRunVector(eigvecs[2]));
   Eigen::Matrix3d rotate = t_.getEigenvectorsAsMatrix();
-  // std::cout << "rotate: " << rotate << "\n";
   Eigen::Matrix3d rotateTranspose = rotate.transpose();
-  // Transform scale = getScale();
   Eigen::Vector3d eigvals = t_.getEigenvalues();
   Eigen::Vector3d eigvalsInv = eigvals.asDiagonal().inverse().diagonal();
   Eigen::Matrix3d scale = eigvals.asDiagonal();
   Eigen::Matrix3d scaleInv = eigvalsInv.asDiagonal();
-  // std::cout << "scale: " << scale << "\n";
 
   const auto scaleThenRotate = rotate * scale;
   const auto undoScaleAndRotate = scaleInv * rotateTranspose;
 
   double cl = t_.linearCertainty();
   double cp = t_.planarCertainty();
-  // std::cout << "cl: " << cl <<"\n";
-  // std::cout << "cp: " << cp <<"\n";
   bool linear = cl >= cp;
-  linear = false;
   std::cout << "linear: " << linear << "\n";
   auto AAndB = getAAndB(cl, cp, linear, emphasis_);
   SuperquadricPointParams params;
@@ -200,12 +90,7 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
   normalParams.A = 2.0 - params.A;
   normalParams.B = 2.0 - params.B;
 
-  // auto pseudoInv = t_.getEigenvalues();
-  // Vector pseudoInvVector;
   MandelVector qn;
-  // for (int i = 0; i < 3; ++i)
-    // pseudoInvVector[i] = 1.0 / pseudoInv[i];
-
   DifftValues difftVals;
   precalculateDifftValues(difftVals, tMandel);
   int nv = resolution_;
@@ -225,17 +110,11 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
         params.sinPhi = normalParams.sinPhi = sinPhi[i];
         params.cosPhi = normalParams.cosPhi = cosPhi[i];
 
-        // std::cout << "sinPhi: " << params.sinPhi << "\n";
-        // std::cout << "cosPhi: " << params.cosPhi << "\n";
-        // std::cout << "sinTheta: " << params.sinTheta << "\n";
-        // std::cout << "cosTheta: " << params.cosTheta << "\n";
-        // std::cout << "eval sup: " << evaluateSuperquadricPoint(linear, params) << "\n";
-        // std::cout << "scale*eval: " << scale*evaluateSuperquadricPoint(linear, params) << "\n";
         Vector pVector = evaluateSuperquadricPoint(linear, params);
         Eigen::Vector3d p = scaleThenRotate * Eigen::Vector3d(pVector.x(), pVector.y(), pVector.z());
-        // std::cout << "p: " << p << "\n";
         Vector normalVector = evaluateSuperquadricPoint(linear, normalParams);
         Eigen::Vector3d normal = Eigen::Vector3d(normalVector.x(), normalVector.y(), normalVector.z());
+        normal = normal.cwiseProduct(eigvalsInv).normalized();
 
         // Surface Derivative
         Eigen::Vector3d nn;
@@ -251,43 +130,20 @@ void UncertaintyTensorOffsetSurfaceBuilder::generateOffsetSurface(
           diff[j] = 0.0;
           nn(j) = (d1 - d2) / h_;
         }
-        // std::cout << "nn: " << nn << "\n";
-        auto qn = getQn(difftVals, p);
-        // std::cout << "nn.norm: " << nn.norm() << "\n";
-
-        // MandelVector diffs;
-        // MandelVector difference;
-        // difference << 0, 0, 0, 0, 0, 0;
-        // for (int i = 0; i < 6; ++i)
-        // {
-          // difference(i) = hHalf_;
-          // diffs(i) = diffT(tMandel + difference, tMandel - difference, p, emphasis_);
-          // std::cout << "diffs ret: " << diffs(i) << "\n";
-          // difference(i) = 0;
-        // }
-
-        // std::cout << "diffs before h: " << diffs.transpose() << "\n";
-        // diffs /= h_;
+        MandelVector qn = getQn(difftVals, p);
         qn /= h_;
         qn /= nn.norm();
-        // std::cout << "qn: " << qn << "\n";
-        // std::cout << "diffs before nn norm: " << diffs.transpose() << "\n";
-        // diffs /= nn.norm();
-        // std::cout << "qn: " << diffs.transpose() << "\n";
         double q = std::sqrt(
             std::abs((qn.transpose().eval() * (covarianceMatrix * qn).eval()).eval().value()));
-        // std::cout << "q: " << q << "\n\n";
+
         Eigen::Vector3d n = nn / nn.norm();
-        Eigen::Vector3d rotatedN = n;
-        Vector rotatedNVector = Vector(rotatedN.x(), rotatedN.y(), rotatedN.z());
+        Vector nVector = Vector(n.x(), n.y(), n.z());
 
         Eigen::Vector3d rotatedNormal = rotate * normal;
-
         Eigen::Vector3d offsetP = p + q * rotatedNormal;
         Vector offsetPVector = Vector(offsetP.x(), offsetP.y(), offsetP.z());
 
-        // if (secondHalf) rotatedNVector *= -1;
-        constructor.addVertex(offsetPVector + centerVector, rotatedNVector, ColorRGB(1.0, 1.0, 1.0));
+        constructor.addVertex(offsetPVector + centerVector, nVector, ColorRGB(1.0, 1.0, 1.0));
       }
 
       constructor.addIndicesToOffset(0, 1, 2);
@@ -423,9 +279,9 @@ void TensorGlyphBuilder::setResolution(int resolution)
   resolution_ = resolution;
 }
 
-void TensorGlyphBuilder::makeTensorPositive(bool reorder, bool makeGlyph)
+void TensorGlyphBuilder::makeTensorPositive(bool makeGlyph)
 {
-  t_.makePositive(reorder, makeGlyph);
+  t_.makePositive(makeGlyph);
 
   auto eigvals = t_.getEigenvalues();
   // This is exactly zero after thresholding
@@ -467,7 +323,7 @@ void TensorGlyphBuilder::postScaleTransforms()
 void TensorGlyphBuilder::generateEllipsoid(GlyphConstructor& constructor, bool half)
 {
   makeTensorPositive(true);
-  t_.reorderTensorValues();
+  t_.setDescendingRHSOrder();
   computeTransforms();
   postScaleTransforms();
   computeSinCosTable(half);
@@ -543,7 +399,7 @@ std::pair<double, double> TensorGlyphBuilder::getAAndB(
 void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructor, double emphasis)
 {
   makeTensorPositive(true);
-  t_.reorderTensorValues();
+  t_.setDescendingRHSOrder();
   computeTransforms();
   postScaleTransforms();
   computeSinCosTable(false);
@@ -560,7 +416,8 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
   normalParams.A = 2.0 - params.A;
   normalParams.B = 2.0 - params.B;
   auto eigvecs = t_.getEigenvectors();
-  auto cross = eigvecs[0].cross(eigvecs[1]);
+  auto eigvals = t_.getEigenvalues();
+  auto eigvalsInv = Vector(1.0 / eigvals.x(), 1.0 / eigvals.y(), 1.0 / eigvals.z());
 
   for (int v = 0; v < nv_ - 1; ++v)
   {
@@ -590,7 +447,7 @@ void TensorGlyphBuilder::generateSuperquadricTensor(GlyphConstructor& constructo
         }
         else
         {
-          normal = Vector(evaluateSuperquadricPoint(linear, normalParams));
+          normal = eigvalsInv * Vector(evaluateSuperquadricPoint(linear, normalParams));
           normal = rotate_ * normal;
           normal.safe_normalize();
         }
@@ -645,12 +502,9 @@ void TensorGlyphBuilder::generateBox(GlyphConstructor& constructor)
 
   std::vector<Vector> points = generateBoxPoints();
   std::vector<Vector> normals = rotate_.get_rotation();
-  // std::cout << "normals\n";
   for (auto& v : normals)
-    // std::cout << v << "\n";
     if (flatTensor_)
     {
-      // std::cout << "is flat!\n";
       for (int d = 0; d < DIMENSIONS_; ++d)
         normals[d] = zeroNorm_;
     }

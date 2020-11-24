@@ -157,7 +157,7 @@ namespace Core {
         return newTensor;
       }
 
-      void makePositive(bool reorder, bool makeGlyph)
+      void makePositive(bool makeGlyph)
       {
         static const double zeroThreshold = 0.000001;
 

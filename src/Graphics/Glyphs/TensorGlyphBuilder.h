@@ -63,7 +63,7 @@ namespace Graphics {
     TensorGlyphBuilder(
         const Core::Datatypes::Dyadic3DTensor& t, const Core::Geometry::Point& center);
     void scaleTensor(double scale);
-    void makeTensorPositive(bool reorder = false, bool makeGlyph = true);
+    void makeTensorPositive(bool makeGlyph = true);
     void normalizeTensor();
     void setColor(const Core::Datatypes::ColorRGB& color);
     void setResolution(int resolution);

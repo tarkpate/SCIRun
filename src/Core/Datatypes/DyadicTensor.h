@@ -55,6 +55,7 @@ namespace Core {
 
       explicit DyadicTensorGeneric(Number val) : parent()
       {
+        ordering_ = OrderState::NONE;
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
             (*this)(i, j) = (i == j) ? val : 0;
@@ -62,6 +63,7 @@ namespace Core {
 
       explicit DyadicTensorGeneric(const std::vector<VectorType>& eigvecs) : parent()
       {
+        ordering_ = OrderState::NONE;
         if (eigvecs.size() != Dim)
           THROW_INVALID_ARGUMENT("The number of input vectors must be " + Dim);
         setEigenVectors(eigvecs);
@@ -69,6 +71,7 @@ namespace Core {
 
       DyadicTensorGeneric(const std::initializer_list<VectorType>& eigvecs) : parent()
       {
+        ordering_ = OrderState::NONE;
         if (eigvecs.size() != Dim)
           THROW_INVALID_ARGUMENT("The number of input vectors must be " + Dim);
         setEigenVectors(eigvecs);
@@ -78,11 +81,13 @@ namespace Core {
           const std::vector<VectorType>& eigvecs, const VectorType& eigvals)
           : parent()
       {
+        ordering_ = OrderState::NONE;
         setEigens(eigvecs, eigvals);
       }
 
       DyadicTensorGeneric(const DyadicTensorGeneric<Number, Dim>& other) : parent()
       {
+        ordering_ = OrderState::NONE;
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
             (*this)(index(i), index(j)) = other(index(i), index(j));
@@ -98,6 +103,7 @@ namespace Core {
         // this->m_storage = std::move(other.m_storage);
         // std::cout << "this " << this->data();
 
+        ordering_ = OrderState::NONE;
         eigvecs_ = std::move(other.eigvecs_);
         eigvals_ = std::move(other.eigvals_);
         haveEigens_ = true;
@@ -105,6 +111,7 @@ namespace Core {
 
       DyadicTensorGeneric(const parent& other) : parent()
       {
+        ordering_ = OrderState::NONE;
         for (size_t i = 0; i < Dim; ++i)
           for (size_t j = 0; j < Dim; ++j)
             (*this)(index(i), index(j)) = other(index(i), index(j));
@@ -112,6 +119,7 @@ namespace Core {
 
       explicit DyadicTensorGeneric(const MatrixType& mat)
       {
+        ordering_ = OrderState::NONE;
         // for (size_t i = 0; i < Dim; ++i)
           // for (size_t j = 0; j < Dim; ++j)
             // if (mat(i, j) != mat(j, i)) THROW_INVALID_ARGUMENT("Input matrix must be symmetric.");
@@ -182,12 +190,13 @@ namespace Core {
 
       void setEigenVectors(const std::vector<VectorType>& eigvecs)
       {
+        std::cout << "set eig vecs\n";
         eigvecs_ = eigvecs;
         setEigenvaluesFromEigenvectors();
         normalizeEigenvectors();
         haveEigens_ = true;
+        ordering_ = OrderState::NONE;
         setTensorValues();
-        reorderTensorValues();
       }
 
       // This function is listed as something that will be added to Eigen::Tensor in the future.
@@ -373,16 +382,7 @@ namespace Core {
         }
 
         haveEigens_ = true;
-        reorderTensorValues();
-      }
-
-      // An arbitrary eigenvector is flipped if the coordinate system is left handed
-      void forceRightHandedCoordinateSystem() const
-      {
-        const static auto epsilon = pow(2, -52);
-        auto rightHandedEigvec2 = eigvecs_[0].cross(eigvecs_[1]);
-        if ((rightHandedEigvec2).dot(eigvecs_[2]) < epsilon)
-          eigvecs_[2] = rightHandedEigvec2;
+        // reorderTensorValues();
       }
 
       void reorderTensorValues() const
@@ -401,7 +401,7 @@ namespace Core {
 
         for (size_t i = 0; i < Dim; ++i)
           std::tie(eigvals_[i], eigvecs_[i]) = *sortedEigsIter++;
-        forceRightHandedCoordinateSystem();
+        // forceRightHandedCoordinateSystem();
       }
 
       void setEigenvaluesFromEigenvectors() const
@@ -417,23 +417,56 @@ namespace Core {
           eigvecs_[i] /= eigvals_[i];
       }
 
-      void setTensorValues()
-      {
-        auto D = eigvals_.asDiagonal();
-        auto V = this->getEigenvectorsAsMatrix();
-        // std::cout << "D " << D.diagonal()(0) << " " << D.diagonal()(1) << " " << D.diagonal()(2) << "\n";
-        // std::cout << "V " << V << "\n";
-        // std::cout << "V.inv " << V.inverse() << "\n";
+     // An arbitrary eigenvector is flipped if the coordinate system is left handed
+     void forceRightHandedCoordinateSystem() const
+     {
+       const static auto epsilon = pow(2, -52);
+       auto rightHandedEigvec2 = eigvecs_[0].cross(eigvecs_[1]);
+       if ((rightHandedEigvec2).dot(eigvecs_[2]) < epsilon) eigvecs_[2] = rightHandedEigvec2;
+       ordering_ = OrderState::DESCENDING_RHS;
+     }
 
-        // std::cout << "D*V.inv " << (D * V.inverse()) << "\n";
-        auto mat = V * (D * V.transpose());
-        // std::cout << "V*D*V.inv " << mat << "\n";
-        for (size_t i = 0; i < Dim; ++i)
-          for (size_t j = 0; j < Dim; ++j)
-            (*this)(index(j), index(i)) = mat(j, i);
+    public:
+     void setDescendingOrder()
+     {
+       if (ordering_ == OrderState::DESCENDING) return;
+       reorderTensorValues();
+       setTensorValues();
+       ordering_ = OrderState::DESCENDING;
+     }
+
+     void setDescendingRHSOrder()
+     {
+       if (ordering_ == OrderState::DESCENDING_RHS) return;
+       reorderTensorValues();
+       forceRightHandedCoordinateSystem();
+       setTensorValues();
+       ordering_ = OrderState::DESCENDING_RHS;
+     }
+
+     void setTensorValues()
+     {
+       auto D = eigvals_.asDiagonal();
+       auto V = this->getEigenvectorsAsMatrix();
+       // std::cout << "D " << D.diagonal()(0) << " " << D.diagonal()(1) << " " << D.diagonal()(2)
+       // << "\n"; std::cout << "V " << V << "\n"; std::cout << "V.inv " << V.inverse() << "\n";
+
+       // std::cout << "D*V.inv " << (D * V.inverse()) << "\n";
+       auto mat = V * (D * V.transpose());
+       // std::cout << "V*D*V.inv " << mat << "\n";
+       for (size_t i = 0; i < Dim; ++i)
+         for (size_t j = 0; j < Dim; ++j) (*this)(index(j), index(i)) = mat(j, i);
       }
 
-      long int index(size_t i) const { return static_cast<long int>(i); }
+    private:
+     enum OrderState
+     {
+       NONE,
+       DESCENDING,
+       DESCENDING_RHS
+     };
+     mutable OrderState ordering_;
+     long int index(size_t i) const { return static_cast<long int>(i); }
     };
   }
 }

@@ -162,7 +162,7 @@ void ShowUncertaintyGlyphsImpl::computeOffsetSurface()
   for (int f = 0; f < fieldSize_; ++f)
   {
     UncertaintyTensorOffsetSurfaceBuilder builder(meanTensors_[f], points_[0][f], emphasis_);
-    builder.setResolution(20);
+    builder.setResolution(51);
     builder.generateOffsetSurface(constructor_, covarianceMatrices_[f]);
   }
 }
@@ -270,7 +270,7 @@ void ShowUncertaintyGlyphsImpl::getTensors(const FieldList& fields)
     {
       vfield->get_value(temp, v);
       tensors_[f][v] = scirunTensorToEigenTensor(temp);
-      // std::cout << "tensr: " << tensors_[f][v] <<"\n";
+      tensors_[f][v].setDescendingRHSOrder();
     }
   }
 }
@@ -284,14 +284,11 @@ void ShowUncertaintyGlyphsImpl::computeMeanTensors()
 {
   meanTensors_ = std::vector<Dyadic3DTensor>(fieldSize_);
   for (int t = 0; t < fieldSize_; ++t)
-  // meanTensors_[t] = computeMeanLinearInvariant(t);
-    meanTensors_[t] = computeMeanTensor(t);
+    meanTensors_[t] = computeMeanLinearInvariant(t);
+    // meanTensors_[t] = computeMeanTensor(t);
 
   // auto eigvecs = meanTensors_[0].getEigenvectors();
   // auto eigvals = meanTensors_[0].getEigenvalues();
-  auto sciT = eigenTensorToScirunTensor(meanTensors_[0]);
-  Vector e0,e1,e2;
-  sciT.get_eigenvectors(e0, e1, e2);
   // std::cout << "e0 " << e0 << "\n";
   // std::cout << "e1 " << e1 << "\n";
   // std::cout << "e2 " << e2 << "\n";
@@ -325,10 +322,10 @@ Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) cons
   const static double sqrtThreeHalves = sqrt(1.5);
   const static double threeSqrtSix = 3.0 * sqrt(6.0);
 
-  const static auto identity = Dyadic3DTensor(Eigen::Vector3d(1, 0, 0),
-                                              Eigen::Vector3d(0, 1, 0),
-                                              Eigen::Vector3d(0, 0, 1));
-  const static auto identityThird = oneThird * identity;
+  const static Dyadic3DTensor identity = Dyadic3DTensor(Eigen::Vector3d(1, 0, 0),
+                                                        Eigen::Vector3d(0, 1, 0),
+                                                        Eigen::Vector3d(0, 0, 1));
+  const static Dyadic3DTensor identityThird = oneThird * identity;
 
   double K1 = 0.0;
   double R2 = 0.0;
@@ -336,12 +333,13 @@ Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) cons
 
   for (int f = 0; f < fieldCount_; ++f)
   {
-    const auto trace = tensors_[f][t].trace();
-    auto trThird = trace * identityThird;
+    const double trace = tensors_[f][t].trace();
+    Dyadic3DTensor trThird = trace * identityThird;
     K1 += trace;
 
-    const auto fro = tensors_[f][t].frobeniusNorm();
-    const auto anisotropicDeviation = tensors_[f][t] - trThird;
+    const double fro = tensors_[f][t].frobeniusNorm();
+    Dyadic3DTensor anisotropicDeviation = tensors_[f][t] - trThird;
+    anisotropicDeviation.setDescendingRHSOrder();
     const double anisotropicDeviationFro = anisotropicDeviation.frobeniusNorm();
 
     R2 += sqrtThreeHalves * anisotropicDeviationFro / fro;
@@ -362,9 +360,11 @@ Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) cons
   eigvals[1] = x + y * std::cos((arccosR3 - 2.0 * M_PI) * oneThird);
   eigvals[2] = x + y * std::cos((arccosR3 + 2.0 * M_PI) * oneThird);
 
-  auto eigvecs = computeMeanTensor(t).getEigenvectors();
-  auto ret = Dyadic3DTensor(eigvecs, eigvals);
+  std::vector<Eigen::Vector3d> eigvecs = computeMeanTensor(t).getEigenvectors();
 
+  Dyadic3DTensor ret = Dyadic3DTensor(eigvecs, eigvals);
+  ret.setDescendingRHSOrder();
+  ret.setTensorValues();
   return ret;
 }
 

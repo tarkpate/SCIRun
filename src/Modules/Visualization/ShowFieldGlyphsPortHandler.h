@@ -85,7 +85,7 @@ namespace SCIRun{
         Core::Datatypes::ColorRGB getColorMapVal(int index);
 
         // Returns color vector to be used for rgb conversion of tensors
-        Core::Geometry::Vector getTensorColorVector(const Core::Datatypes::Dyadic3DTensor& t);
+        Core::Geometry::Vector getTensorColorVector(Core::Datatypes::Dyadic3DTensor t);
 
      public:
         ShowFieldGlyphsPortHandler(

@@ -495,16 +495,14 @@ namespace SCIRun{
       }
 
       // Returns color vector for tensor that are using rgb conversion
-      Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(const Dyadic3DTensor& t)
+      Geometry::Vector ShowFieldGlyphsPortHandler::getTensorColorVector(Dyadic3DTensor t)
       {
         const static double epsilon = pow(2, -50);
-        auto eigvals = t.getEigenvalues();
-        for (size_t i = 0; i < eigvals.size(); ++i)
-          eigvals[i] = std::abs(eigvals[i]);
+        t.makePositive(false);
+        t.setDescendingRHSOrder();
 
-        Dyadic3DTensor newT(t.getEigenvectors(), eigvals);
-        eigvals = newT.getEigenvalues();
-        auto eigvecs = newT.getEigenvectors();
+        auto eigvals = t.getEigenvalues();
+        auto eigvecs = t.getEigenvectors();
 
         Eigen::Vector3d colorVector = eigvecs[0];
         if (std::abs(eigvals[0] - eigvals[1]) < epsilon)
@@ -513,7 +511,7 @@ namespace SCIRun{
           if (std::abs(eigvals[1] - eigvals[2]) < epsilon)
             colorVector += eigvecs[2];
         }
-        colorVector /= colorVector.norm();
+        colorVector.normalize();
         return Geometry::Vector(colorVector[0], colorVector[1], colorVector[2]);
       }
 
