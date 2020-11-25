@@ -41,6 +41,7 @@
 #include <Graphics/Glyphs/GlyphGeom.h>
 #include <Graphics/Glyphs/GlyphGeomUtility.h>
 #include <Graphics/Glyphs/TensorGlyphBuilder.h>
+#include <unsupported/Eigen/MatrixFunctions>
 
 using namespace SCIRun;
 using namespace Graphics;
@@ -67,7 +68,8 @@ class ShowUncertaintyGlyphsImpl
   void computeMeanTensors();
   Dyadic3DTensor computeMeanTensor(int index) const;
   Dyadic3DTensor computeMeanLinearInvariant(int t) const;
-  void computeCovarianceMatrices();
+  Dyadic3DTensor computeMeanLogEuclidean(int t) const;
+      void computeCovarianceMatrices();
   void verifyData(const FieldList& fields);
   void getPoints(const FieldList& fields);
   void getPointsForFields(FieldHandle field, std::vector<int>& indices, std::vector<Point>& points);
@@ -286,6 +288,7 @@ void ShowUncertaintyGlyphsImpl::computeMeanTensors()
   for (int t = 0; t < fieldSize_; ++t)
     meanTensors_[t] = computeMeanLinearInvariant(t);
     // meanTensors_[t] = computeMeanTensor(t);
+    // meanTensors_[t] = computeMeanLogEuclidean(t);
 
   // auto eigvecs = meanTensors_[0].getEigenvectors();
   // auto eigvals = meanTensors_[0].getEigenvalues();
@@ -360,12 +363,30 @@ Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLinearInvariant(int t) cons
   eigvals[1] = x + y * std::cos((arccosR3 - 2.0 * M_PI) * oneThird);
   eigvals[2] = x + y * std::cos((arccosR3 + 2.0 * M_PI) * oneThird);
 
-  std::vector<Eigen::Vector3d> eigvecs = computeMeanTensor(t).getEigenvectors();
+  Dyadic3DTensor meanForOrientation = computeMeanLogEuclidean(t);
+  meanForOrientation.setDescendingRHSOrder();
+  std::vector<Eigen::Vector3d> eigvecs = meanForOrientation.getEigenvectors();
 
   Dyadic3DTensor ret = Dyadic3DTensor(eigvecs, eigvals);
   ret.setDescendingRHSOrder();
   ret.setTensorValues();
   return ret;
+}
+
+Dyadic3DTensor ShowUncertaintyGlyphsImpl::computeMeanLogEuclidean(int t) const
+{
+  Eigen::Matrix3d sum;
+  for (int f = 0; f < fieldCount_; ++f)
+  {
+    auto tensor = tensors_[f][t];
+    auto eigvalsLog = tensor.getEigenvalues();
+    auto rotation = tensor.getEigenvectorsAsMatrix();
+    for (int i = 0; i < eigvalsLog.size(); ++i) eigvalsLog[i] = std::log(eigvalsLog[i]);
+    sum += rotation.transpose() * eigvalsLog.asDiagonal() * rotation;
+  }
+  sum /= fieldCount_;
+  Eigen::Matrix3d mean = sum.exp();
+  return Dyadic3DTensor(mean);
 }
 
 
