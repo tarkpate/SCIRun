@@ -33,6 +33,7 @@ SET(Modules_Fields_SRCS
   CalculateNodeLocationFrequency.cc
   RefineTetMeshLocally.cc
   CalculateBundleDifference.cc
+  CoalesceMesh.cc
 )
 
 SET(Modules_Fields_HEADERS
@@ -42,6 +43,7 @@ SET(Modules_Fields_HEADERS
   CalculateNodeLocationFrequency.h
   RefineTetMeshLocally.h
   CalculateBundleDifference.h
+  CoalesceMesh.h
   share.h
 )
 

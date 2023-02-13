@@ -31,6 +31,7 @@ SET(Algorithms_Field_SRCS
   InterfaceWithCleaver2Algorithm.cc
   CalculateNodeLocationFrequencyAlgorithm.cc
   RefineTetMeshLocallyAlgorithm.cc
+  CoalesceMeshAlgorithm.cc
 )
 
 SET(Algorithms_Field_HEADERS
@@ -38,6 +39,7 @@ SET(Algorithms_Field_HEADERS
   InterfaceWithCleaver2Algorithm.h
   CalculateNodeLocationFrequencyAlgorithm.h
   RefineTetMeshLocallyAlgorithm.h
+  CoalesceMeshAlgorithm.h
   share.h
 )
 

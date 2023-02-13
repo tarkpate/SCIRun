@@ -1,0 +1,18 @@
+{
+  "module": {
+    "name": "CoalesceMesh",
+    "namespace": "Fields",
+    "status": "...",
+    "description": "...",
+    "header": "Modules/Fields/CoalesceMesh.h"
+  },
+  "algorithm": {
+    "name": "CoalesceMeshAlgo",
+    "namespace": "Fields",
+    "header": "Core/Algorithms/Field/CoalesceMeshAlgorithm.h"
+  },
+  "UI": {
+    "name": "CoalesceMeshDialog",
+    "header": "Interface/Modules/Fields/CoalesceMeshDialog.h"
+  }
+}
