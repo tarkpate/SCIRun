@@ -44,6 +44,7 @@ SET(Algorithms_Math_SRCS
   ColumnMisfitCalculator/ColumnMatrixMisfitCalculator.cc
   ComputePCA.cc
   ComputeTensorUncertaintyAlgorithm.cc
+  DownsampleTensorFieldAlgorithm.cc
   CollectMatrices/CollectMatricesAlgorithm.cc
   ReportMatrixSliceMeasureAlgo.cc
   BooleanCompareAlgo.cc
@@ -70,6 +71,7 @@ SET(Algorithms_Math_HEADERS
   ColumnMisfitCalculator/ColumnMatrixMisfitCalculator.h
   ComputePCA.h
   ComputeTensorUncertaintyAlgorithm.h
+  DownsampleTensorFieldAlgorithm.h
   CollectMatrices/CollectMatricesAlgorithm.h
   ReportMatrixSliceMeasureAlgo.h
   BooleanCompareAlgo.h

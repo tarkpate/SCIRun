@@ -1,0 +1,18 @@
+{
+  "module": {
+    "name": "DownsampleTensorField",
+    "namespace": "Math",
+    "status": "...",
+    "description": "...",
+    "header": "Modules/Math/DownsampleTensorField.h"
+  },
+  "algorithm": {
+    "name": "DownsampleTensorFieldAlgorithm",
+    "namespace": "Math",
+    "header": "Core/Algorithms/Math/DownsampleTensorFieldAlgorithm.h"
+  },
+  "UI": {
+    "name": "DownsampleTensorFieldDialog",
+    "header": "Interface/Modules/Math/DownsampleTensorFieldDialog.h"
+  }
+}

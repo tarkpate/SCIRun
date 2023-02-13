@@ -54,6 +54,7 @@ SET(Modules_Math_SRCS
   ResizeMatrix.cc
   CreateStandardMatrix.cc
   ComputeTensorUncertainty.cc
+  DownsampleTensorField.cc
 )
 
 SET(Modules_Math_HEADERS
@@ -85,6 +86,7 @@ SET(Modules_Math_HEADERS
   ResizeMatrix.h
   CreateStandardMatrix.h
   ComputeTensorUncertainty.h
+  DownsampleTensorField.h
 )
 
 SCIRUN_ADD_LIBRARY(Modules_Math

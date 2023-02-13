@@ -53,6 +53,7 @@ SET(Interface_Modules_Math_FORMS
   ResizeMatrixDialog.ui
   CreateStandardMatrixDialog.ui
   ComputeTensorUncertainty.ui
+  DownsampleTensorField.ui
 )
 
 SET(Interface_Modules_Math_HEADERS
@@ -84,6 +85,7 @@ SET(Interface_Modules_Math_HEADERS
   ResizeMatrixDialog.h
   CreateStandardMatrixDialog.h
   ComputeTensorUncertaintyDialog.h
+  DownsampleTensorFieldDialog.h
 )
 
 SET(Interface_Modules_Math_SOURCES
@@ -114,6 +116,7 @@ SET(Interface_Modules_Math_SOURCES
   ResizeMatrixDialog.cc
   CreateStandardMatrixDialog.cc
   ComputeTensorUncertaintyDialog.cc
+  DownsampleTensorFieldDialog.cc
 )
 
 QT_WRAP_UI(Interface_Modules_Math_FORMS_HEADERS "${Interface_Modules_Math_FORMS}")
