@@ -43,17 +43,18 @@ namespace SCIRun{
 		namespace Core{
 				namespace Algorithms{
 						namespace Fields{
+                            static const AlgorithmInputName IsoValueField;
 
 ALGORITHM_PARAMETER_DECL(CoalesceMethod);
 ALGORITHM_PARAMETER_DECL(AddConstraints);
-ALGORITHM_PARAMETER_DECL(IsoValue);
+// ALGORITHM_PARAMETER_DECL(IsoValue);
 
 class SCISHARE CoalesceMeshAlgo : public AlgorithmBase
 {
   public:
     CoalesceMeshAlgo();
 		bool runImpl(FieldHandle input, Datatypes::Double isovalue, FieldHandle& output, Datatypes::MatrixHandle& mapping) const;
-		bool runImpl(FieldHandle input, FieldHandle& output) const;
+		bool runImpl(FieldHandle& inputField, FieldHandle& isoValueField, FieldHandle& output) const;
 
 		AlgorithmOutput run(const AlgorithmInput& input) const override;
 };

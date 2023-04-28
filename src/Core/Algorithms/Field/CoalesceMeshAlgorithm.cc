@@ -48,22 +48,23 @@ using namespace SCIRun::Core::Logging;
 
 ALGORITHM_PARAMETER_DEF(Fields, AddConstraints);
 ALGORITHM_PARAMETER_DEF(Fields, CoalesceMethod);
-ALGORITHM_PARAMETER_DEF(Fields, IsoValue);
+// ALGORITHM_PARAMETER_DEF(Fields, IsoValue);
 
 CoalesceMeshAlgo::CoalesceMeshAlgo()
 {
 		using namespace Parameters;
 		addOption(AddConstraints,"all","all|greaterthan|unequal|lessthan|none");
 		addOption(CoalesceMethod,"Default","Default|Expand coalescement volume to improve element quality");
-		addParameter(IsoValue,0.0);
+		// addParameter(IsoValue,0.0);
 }
 
 AlgorithmOutput CoalesceMeshAlgo::run(const AlgorithmInput& input) const
 {
 	auto field = input.get<Field>(Variables::InputField);
+	auto isoVals = input.get<Field>(IsoValueField);
   FieldHandle outputField;
 
-  if (!runImpl(field, outputField))
+  if (!runImpl(field, isoVals, outputField))
     THROW_ALGORITHM_PROCESSING_ERROR("False returned on legacy run call.");
 	AlgorithmOutput output;
 	output[Variables::OutputField] = outputField;
@@ -73,45 +74,49 @@ AlgorithmOutput CoalesceMeshAlgo::run(const AlgorithmInput& input) const
 // General access function
 
 bool
-CoalesceMeshAlgo::runImpl(FieldHandle input, FieldHandle& output) const
+CoalesceMeshAlgo::runImpl(FieldHandle& inputField, FieldHandle& isoValueField, FieldHandle& output) const
 {
 	REPORT_STATUS(CoalesceMesh);
-  if (!input)
-  {
+  if (!inputField) {
     error("No input field");
-    return (false);
+    return false;
   }
-	FieldInformation fi(input);
+  if (!isoValueField) {
+    error("No isoValue field");
+    return false;
+  }
+
+	FieldInformation fi(inputField);
 	FieldInformation fo(output);
 
 	const std::string rMethod = getOption(Parameters::CoalesceMethod);
-	const double isoVal = get(Parameters::IsoValue).toDouble();
+	// const double isoVals = get(Parameters::IsoValue).toDouble();
 	const std::string addCon = getOption(Parameters::AddConstraints);
 
-  if (input->vfield()->num_values() == 0)
+  if (inputField->vfield()->num_values() == 0)
   {
     error("Input field has no data values. The CoalesceMesh algorithm requires input fields to contain data.");
-    return (false);
+    return false;
   }
 
   if (addCon == "none")
   {
-    output = input;
-    return (true);
+    output = inputField;
+    return true;
   }
 
   if (fi.is_pnt_element() || fi.is_prism_element())
   {
     error("This algorithm does not support point or prism meshes");
-    return(false);
+    return false;
   }
 
-  if ((!(fi.is_scalar())) && (addCon != "all"))
+  if (!fi.is_tensor())
   {
-    error("Field data needs to be of scalar type");
-    return (false);
+    error("Field data needs to be of tensor type");
+    return false;
   }
 
   error("No coalescement method has been implemented for this type of mesh");
-  return (false);
+  return false;
 }

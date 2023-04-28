@@ -59,7 +59,7 @@ void CoalesceMesh::setStateDefaults()
 {
   setStateStringFromAlgoOption(Parameters::AddConstraints);
   setStateStringFromAlgoOption(Parameters::CoalesceMethod);
-  setStateDoubleFromAlgo(Parameters::IsoValue);
+  // setStateDoubleFromAlgo(Parameters::IsoValue);
 }
 
 // TODO move to separate algo
@@ -132,23 +132,24 @@ void getPointsForFields(
 void CoalesceMesh::execute()
 {
   // FieldList input = {getRequiredInput(InputField), getRequiredInput(IsoValueField)};
-  auto input = getRequiredInput(InputField);
-  // auto isovaluefield = getOptionalInput(IsoValueField);
+  auto field = getRequiredInput(InputField);
+  auto isovalueField = getRequiredInput(IsoValueField);
 
   if (needToExecute()) {
     setAlgoOptionFromState(Parameters::AddConstraints);
     setAlgoOptionFromState(Parameters::CoalesceMethod);
-    setAlgoDoubleFromState(Parameters::IsoValue);
+    // setAlgoDoubleFromState(Parameters::IsoValue);
 
     std::vector<Mesh::index_type> dims;
-    get_dimensions(input, dims);
+    get_dimensions(field, dims);
 
-    auto vfield = input->vfield();
+    auto vfield = field->vfield();
     Tensor temp;
     auto indices = std::vector<int>();
     auto points = std::vector<Point>();
-    getPointsForFields(input, indices, points);
+    getPointsForFields(field, indices, points);
     auto fieldSize = indices.size();
+    // TODO add check for field type and maybe add support for scalar and vector
     auto tensors = std::vector<Tensor>(fieldSize);
     for (size_t v = 0; v < fieldSize; ++v)
     {
@@ -158,8 +159,7 @@ void CoalesceMesh::execute()
     std::cout << "dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl;
 
 
-
-    // auto output = algo().run(withInputData((InputField, input)));
-    // sendOutputFromAlgorithm(OutputField, output);
+    auto output = algo().run(withInputData((InputField, field)(IsoValueField, isovalueField)));
+    sendOutputFromAlgorithm(OutputField, output);
   }
 }
