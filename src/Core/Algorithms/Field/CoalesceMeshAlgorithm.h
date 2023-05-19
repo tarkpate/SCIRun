@@ -29,21 +29,22 @@
 #ifndef CORE_ALGORITHMS_FIELDS_COALESCEMESH_COALESCEMESH_H
 #define CORE_ALGORITHMS_FIELDS_COALESCEMESH_COALESCEMESH_H 1
 
-// Datatypes that the algorithm uses
 #include <Core/Datatypes/DatatypeFwd.h>
-
-// Base class for algorithm
 #include <Core/Algorithms/Base/AlgorithmBase.h>
+#include <Core/Datatypes/Legacy/Field/VMesh.h>
+#include <Core/Datatypes/Legacy/Field/Field.h>
+#include <Core/Datatypes/Legacy/Field/VField.h>
+#include <Core/Datatypes/Mesh/MeshFacade.h>
+#include <Core/Datatypes/Geometry.h>
 
 // for Windows support
 #include <Core/Algorithms/Field/share.h>
-
 
 namespace SCIRun{
 		namespace Core{
 				namespace Algorithms{
 						namespace Fields{
-                            static const AlgorithmInputName IsoValueField;
+                            static const AlgorithmInputName IsoValueField("IsoValueField");
 
 ALGORITHM_PARAMETER_DECL(CoalesceMethod);
 ALGORITHM_PARAMETER_DECL(AddConstraints);
@@ -57,6 +58,9 @@ class SCISHARE CoalesceMeshAlgo : public AlgorithmBase
 		bool runImpl(FieldHandle& inputField, FieldHandle& isoValueField, FieldHandle& output) const;
 
 		AlgorithmOutput run(const AlgorithmInput& input) const override;
+  private:
+        const static int DIM_SIZE_ = 3;
+        const static int BLOCK_SIZE_ = 8;
 };
 
 }}}}

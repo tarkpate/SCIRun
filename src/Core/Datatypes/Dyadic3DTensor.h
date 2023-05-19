@@ -149,6 +149,13 @@ namespace Core {
         return newTensor;
       }
 
+      template <typename OtherDerived>
+      Dyadic3DTensorGeneric<Number> operator/(const OtherDerived& other) const
+      {
+        Dyadic3DTensorGeneric<Number> newTensor(parent::operator/(other));
+        return newTensor;
+      }
+
       using parent::makePositive;
       Number fractionalAnisotropy() const
       {

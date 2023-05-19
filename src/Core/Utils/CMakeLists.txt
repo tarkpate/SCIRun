@@ -43,6 +43,7 @@ SET(Core_Utils_HEADERS
   StringUtil.h
   ProgressReporter.h
   TypeIDTable.h
+  TensorUtil.h
   share.h
   CurrentFileName.h
 )
