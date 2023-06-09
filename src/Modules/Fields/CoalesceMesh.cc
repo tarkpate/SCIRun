@@ -57,9 +57,11 @@ CoalesceMesh::CoalesceMesh() : Module(staticInfo_)
 
 void CoalesceMesh::setStateDefaults()
 {
+  auto state = get_state();
   setStateStringFromAlgoOption(Parameters::AddConstraints);
   setStateStringFromAlgoOption(Parameters::CoalesceMethod);
-  // setStateDoubleFromAlgo(Parameters::IsoValue);
+  setStateDoubleFromAlgo(Parameters::IsoValue);
+  setStateIntFromAlgo(Parameters::CoalesceCount);
 }
 
 // TODO move to separate algo
@@ -138,7 +140,8 @@ void CoalesceMesh::execute()
   if (needToExecute()) {
     setAlgoOptionFromState(Parameters::AddConstraints);
     setAlgoOptionFromState(Parameters::CoalesceMethod);
-    // setAlgoDoubleFromState(Parameters::IsoValue);
+    setAlgoDoubleFromState(Parameters::IsoValue);
+    setAlgoIntFromState(Parameters::CoalesceCount);
 
     std::vector<Mesh::index_type> dims;
     get_dimensions(field, dims);

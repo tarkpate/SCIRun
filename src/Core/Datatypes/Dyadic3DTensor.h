@@ -128,8 +128,13 @@ namespace Core {
         return *this;
       }
 
-      template <typename OtherDerived>
-      Dyadic3DTensorGeneric<Number> operator*(const OtherDerived& other) const
+      Dyadic3DTensorGeneric<Number> operator*(Number val) const
+      {
+        Dyadic3DTensorGeneric<Number> newTensor(parent::operator*(val));
+        return newTensor;
+      }
+
+      Dyadic3DTensorGeneric<Number> operator*(const Dyadic3DTensorGeneric<Number>& other) const
       {
         Dyadic3DTensorGeneric<Number> newTensor(parent::operator*(other));
         return newTensor;

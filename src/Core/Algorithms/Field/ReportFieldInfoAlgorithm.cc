@@ -111,6 +111,7 @@ ReportFieldInfoAlgorithm::Outputs ReportFieldInfoAlgorithm::update_input_attribu
     output.numnodes_ = vmesh->num_nodes();
     output.numelements_ = vmesh->num_elems();
 
+
     VMesh::dimension_type dim;
     vmesh->get_dimensions(dim);
     output.dims = Vector(1.0,1.0,1.0);

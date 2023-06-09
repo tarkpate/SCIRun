@@ -50,7 +50,8 @@ CoalesceMeshDialog::CoalesceMeshDialog(const std::string& name, ModuleStateHandl
     {"Do not coalesce any elements", "none"}}
   );
   addComboBoxManager(coalescementComboBox_, Parameters::CoalesceMethod);
-  // addDoubleSpinBoxManager(isoValueSpinBox_, Parameters::IsoValue);
+  addDoubleSpinBoxManager(isoValueSpinBox_, Parameters::IsoValue);
+  addSpinBoxManager(coalesceSpinBox_, Parameters::CoalesceCount);
 
   connect(constraintComboBox_, qOverload<int>(&QComboBox::activated), this, &CoalesceMeshDialog::setIsoValueEnabled);
 }
@@ -67,7 +68,7 @@ void CoalesceMeshDialog::setIsoValueEnabled()
     if (constraintComboBox_->currentIndex() != 0)
     {
       isoValueSpinBox_->setEnabled(true);
-      // state_->getValue(Parameters::IsoValue).toDouble();
+      state_->getValue(Parameters::IsoValue).toDouble();
     }
     else
       isoValueSpinBox_->setEnabled(false);

@@ -217,10 +217,15 @@ namespace Core {
         return true;
       }
 
-      template <typename OtherDerived>
-      TensorType operator*(const OtherDerived& other) const
+      TensorType operator*(const TensorType& other) const
       {
         TensorType newTensor(parent::operator*(other));
+        return newTensor;
+      }
+
+      TensorType operator*(Number val) const
+      {
+        TensorType newTensor(parent::operator*(val));
         return newTensor;
       }
 
