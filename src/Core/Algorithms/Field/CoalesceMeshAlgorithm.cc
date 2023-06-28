@@ -56,6 +56,7 @@ ALGORITHM_PARAMETER_DEF(Fields, AddConstraints);
 ALGORITHM_PARAMETER_DEF(Fields, CoalesceMethod);
 ALGORITHM_PARAMETER_DEF(Fields, IsoValue);
 ALGORITHM_PARAMETER_DEF(Fields, CoalesceCount);
+ALGORITHM_PARAMETER_DEF(Fields, NeighborThreshold);
 
 enum class FieldDataType
 {
@@ -68,15 +69,15 @@ enum class FieldDataType
 class CoalesceDataNode {
   bool coalesced;
   bool valid;
-  bool neighbor_coalesced;
+  int neighbors_coalesced;
   Dyadic3DTensor t;
   Point p;
   float v;
   public:
     CoalesceDataNode() {
       coalesced = false;
-      valid = true;
-      neighbor_coalesced = false;
+      valid = false;
+      neighbors_coalesced = 0;
       t = Dyadic3DTensor();
       p = Point();
       v = 0;
@@ -84,7 +85,7 @@ class CoalesceDataNode {
     CoalesceDataNode(const CoalesceDataNode& other) {
       coalesced = other.isCoalesced();
       valid = other.isValid();
-      neighbor_coalesced = other.isNeighborCoalesced();
+      neighbors_coalesced = other.getNeighborsCoalesced();
       t = other.getTensor();
       p = other.getPoint();
       v = other.getUncertaintyVal();
@@ -95,15 +96,16 @@ class CoalesceDataNode {
     //   v = v_in;
     //   coalesced_in = coalesced;
     // }
+    void resetNeighbors() { neighbors_coalesced=0; }
     void setValid(bool val) { valid=val; }
     void setCoalesced(bool val) { coalesced=val; }
-    void setNeighborCoalesced(bool val) { neighbor_coalesced=val; }
+    void addNeighborCoalesced() { neighbors_coalesced++; }
     void setTensor(Dyadic3DTensor val) { t=val; }
     void setPoint(Point val) { p=val; }
     void setUncertaintyVal(float val) { v=val; }
     bool isCoalesced() const { return coalesced; }
     bool isValid() const { return valid; }
-    bool isNeighborCoalesced() const { return neighbor_coalesced; }
+    int getNeighborsCoalesced() const { return neighbors_coalesced; }
     const Dyadic3DTensor& getTensor() const { return t; }
     const Point& getPoint() const { return p; }
     float getUncertaintyVal() const { return v; }
@@ -155,10 +157,10 @@ class CoalesceData {
     std::vector<CoalesceDataNode> data;
     data_index_type dims;
     data_index_type data_dims; // need to maintain to keep track of indexing
-    VMesh::Node::index_type getArrayIndex(int x, int y, int z) {
+    VMesh::Node::index_type getArrayIndex(int x, int y, int z) const {
         return z*(data_dims[1]*data_dims[0]) + y*(data_dims[0]) + x;
     }
-    VMesh::Node::index_type getArrayIndex(data_index_type idx) {
+    VMesh::Node::index_type getArrayIndex(data_index_type idx) const {
         return idx[2]*(data_dims[1]*data_dims[0]) + idx[1]*(data_dims[0]) + idx[0];
       // return idx[2]*(dim[1]*dim[0]) + idx[1]*(dim[0]) + idx[0];
 
@@ -188,6 +190,7 @@ class CoalesceData {
 
     CoalesceDataNode* getNode(data_index_type idx) { return &data[getArrayIndex(idx)]; }
     CoalesceDataNode* getNode(int x, int y, int z) { return &data[getArrayIndex(x, y, z)]; }
+    const CoalesceDataNode* getNodeConst(int x, int y, int z) const { return &data[getArrayIndex(x, y, z)]; }
     void setNode(data_index_type idx, const CoalesceDataNode& node) { data[getArrayIndex(idx)] = CoalesceDataNode(node); }
     void setNode(int x, int y, int z, const CoalesceDataNode& node) { data[getArrayIndex(x, y, z)] = CoalesceDataNode(node); }
 
@@ -202,11 +205,11 @@ class CoalesceData {
           for (int i = 0; i < dims[0]; i++) {
             auto n = getNode(i,j,k);
             n->setCoalesced(false);
-            n->setNeighborCoalesced(false);
+            // n->setNeighborCoalesced(false);
           }
     }
 
-    void addUncoalesced(FieldHandle& output) {
+    void addUncoalesced(FieldHandle& output, int neighborThres) {
       bool flat = dims[0]==1 || dims[1]==1 || dims[2]==1;
       for (int k = 0; k < dims[2]; k++)
         for (int j = 0; j < dims[1]; j++)
@@ -214,14 +217,16 @@ class CoalesceData {
             // for (int i = 0; i < data.size(); ++i) {
             // auto n = data[i];
             auto n = getNode(i,j,k);
+            if (n->getNeighborsCoalesced() < neighborThres) {
+              addTensorToField(output, n->getPoint(), n->getTensor());
+            }
+            continue;
             // if (!n.isCoalesced() && n.isValid() && !n.isNeighborCoalesced()) {
             // if (!n.isNeighborCoalesced()) {
-            if (n->isValid()) {
+            if (n->isValid() && n->getNeighborsCoalesced() > neighborThres) {
               if (!flat && (i==(dims[0]-1) || j==(dims[1]-1) || k==(dims[2]-1))) {
-                if (!n->isNeighborCoalesced()) {
                   addTensorToField(output, n->getPoint(), n->getTensor());
                   n->setValid(false);
-                }
               } else if (!n->isCoalesced()) {
                 addTensorToField(output, n->getPoint(), n->getTensor());
                 n->setValid(false);
@@ -256,16 +261,16 @@ class CoalesceData {
     }
 
     const data_index_type& getDims() const { return dims; }
-    void setCoalesced(data_index_type idx, bool val) { getNode(idx)->setCoalesced(val); }
-    void setTensor(data_index_type idx, Dyadic3DTensor val) { getNode(idx)->setTensor(val); }
-    void setPoint(data_index_type idx, Point val) { getNode(idx)->setPoint(val); }
-    void setUncertaintyVal(data_index_type idx, float val) { getNode(idx)->setUncertaintyVal(val); }
-    bool getCoalesced(data_index_type idx) { return getNode(idx)->isCoalesced(); }
-    const Dyadic3DTensor& getTensor(data_index_type idx) { return getNode(idx)->getTensor(); }
+    // void setCoalesced(data_index_type idx, bool val) { getNode(idx)->setCoalesced(val); }
+    // void setTensor(data_index_type idx, Dyadic3DTensor val) { getNode(idx)->setTensor(val); }
+    // void setPoint(data_index_type idx, Point val) { getNode(idx)->setPoint(val); }
+    // void setUncertaintyVal(data_index_type idx, float val) { getNode(idx)->setUncertaintyVal(val); }
+    // bool getCoalesced(data_index_type idx) { return getNode(idx)->isCoalesced(); }
+    // const Dyadic3DTensor& getTensor(data_index_type idx) { return getNode(idx)->getTensor(); }
     const Dyadic3DTensor& getTensor(int x, int y, int z) { return getNode(x, y, z)->getTensor(); }
-    const Point& getPoint(data_index_type idx) { return getNode(idx)->getPoint(); }
+    // const Point& getPoint(data_index_type idx) { return getNode(idx)->getPoint(); }
     const Point& getPoint(int x, int y, int z) { return getNode(x, y, z)->getPoint(); }
-    float getUncertaintyVal(data_index_type idx) { return getNode(idx)->getUncertaintyVal(); }
+    // float getUncertaintyVal(data_index_type idx) { return getNode(idx)->getUncertaintyVal(); }
 };
 
 // VMesh::Node::index_type getArrayIndex(CoalesceData::data_index_type dim, int i, int j, int k) {
@@ -279,6 +284,7 @@ CoalesceMeshAlgo::CoalesceMeshAlgo()
 		addOption(CoalesceMethod,"Default","Default|Expand coalescement volume to improve element quality");
 		addParameter(IsoValue,0.5);
 		addParameter(CoalesceCount,1);
+		addParameter(NeighborThreshold,2);
 }
 
 AlgorithmOutput CoalesceMeshAlgo::run(const AlgorithmInput& input) const
@@ -318,12 +324,12 @@ void addRemaining(CoalesceData& coalesceData, FieldHandle& output) {
     for (int j = 0; j < dims[1]; j++)
       for (int i = 0; i < dims[0]; i++) {
         auto n = coalesceData.getNode(i,j,k);
-        if (n->isValid() && n->isCoalesced())
+        if (n->isValid())
           addTensorToField(output, n->getPoint(), n->getTensor());
       }
 }
-void furtherCoalesce(CoalesceData& coalesceData, float unc_threshold) {
-  coalesceData.resetCoalesced();
+void furtherCoalesce(CoalesceData& coalesceData, CoalesceData& newData, float unc_threshold) {
+  // coalesceData.resetCoalesced();
   // coalesceData.decrementDims();
   const CoalesceData::data_index_type& dims = coalesceData.getDims();
   // CoalesceData::data_index_type idx;
@@ -350,23 +356,23 @@ void furtherCoalesce(CoalesceData& coalesceData, float unc_threshold) {
         // auto t = coalesceData.getTensor(idx);
         // std::cout << "p: " <<  p << "\n";
         // std::cout << "t: " <<  t << "\n";
-        std::vector<CoalesceDataNode*> nodes = {coalesceData.getNode(i,j,k)};
+        std::vector<const CoalesceDataNode*> nodes = {coalesceData.getNodeConst(i,j,k)};
         // nodes[0].setCoalesced(false);
         if (!nodes[0]->isValid()) continue;
         if (!x_flat)
-          nodes.push_back(coalesceData.getNode(i+1,j,k));
+          nodes.push_back(coalesceData.getNodeConst(i+1,j,k));
         if (!y_flat)
-          nodes.push_back(coalesceData.getNode(i,j+1,k));
+          nodes.push_back(coalesceData.getNodeConst(i,j+1,k));
         if (!z_flat)
-          nodes.push_back(coalesceData.getNode(i,j,k+1));
+          nodes.push_back(coalesceData.getNodeConst(i,j,k+1));
         if (!x_flat && !y_flat)
-          nodes.push_back(coalesceData.getNode(i+1,j+1,k));
+          nodes.push_back(coalesceData.getNodeConst(i+1,j+1,k));
         if (!x_flat && !z_flat)
-          nodes.push_back(coalesceData.getNode(i+1,j,k+1));
+          nodes.push_back(coalesceData.getNodeConst(i+1,j,k+1));
         if (!y_flat && !z_flat)
-          nodes.push_back(coalesceData.getNode(i,j+1,k+1));
+          nodes.push_back(coalesceData.getNodeConst(i,j+1,k+1));
         if (!x_flat && !y_flat && !z_flat)
-          nodes.push_back(coalesceData.getNode(i+1,j+1,k+1));
+          nodes.push_back(coalesceData.getNodeConst(i+1,j+1,k+1));
         bool valid = true;
         for (auto n : nodes)
           if (!n->isValid()) valid = false;
@@ -399,20 +405,49 @@ void furtherCoalesce(CoalesceData& coalesceData, float unc_threshold) {
         double scale_factor = 1.2;
         avg = avg / nodes.size() * scale_factor;
         if (avg.getUncertaintyVal() < unc_threshold) {
-          avg.setCoalesced(true);
-          coalesceData.setNode(i,j,k, avg);
+          // avg.setCoalesced(true);
+          avg.setValid(true);
+          avg.resetNeighbors();
+          newData.setNode(i,j,k, avg);
           // printf("coalesced\n");
           // for (int n = 1; n < nodes.size(); ++n)
             // nodes[n]->setNeighborCoalesced(true);
-          if (!x_flat)
-            coalesceData.getNode(i+1,j,k)->setNeighborCoalesced(true);
-          if (!y_flat)
-            coalesceData.getNode(i,j+1,k)->setNeighborCoalesced(true);
-          if (!z_flat)
-            coalesceData.getNode(i,j,k+1)->setNeighborCoalesced(true);
-          // coalesceData.getNode(i+1,j,k+1)->setNeighborCoalesced(true);
-          // coalesceData.getNode(i+1,j+1,k)->setNeighborCoalesced(true);
-          // coalesceData.getNode(i,j+1,k+1)->setNeighborCoalesced(true);
+          // newData.getNode(i,j,k)->setCoalesced(true);
+          if (!x_flat) {
+            coalesceData.getNode(i+1,j,k)->addNeighborCoalesced();
+            if (i > 0)
+              coalesceData.getNode(i-1,j,k)->addNeighborCoalesced();
+          }
+          if (!y_flat) {
+            coalesceData.getNode(i,j+1,k)->addNeighborCoalesced();
+            if (j > 0)
+              coalesceData.getNode(i,j-1,k)->addNeighborCoalesced();
+          }
+          if (!z_flat) {
+            coalesceData.getNode(i,j,k+1)->addNeighborCoalesced();
+            if (k > 0)
+              coalesceData.getNode(i,j,k-1)->addNeighborCoalesced();
+          }
+          if (!x_flat || !z_flat) {
+            coalesceData.getNode(i+1,j,k+1)->addNeighborCoalesced();
+            if (i > 0 && k > 0)
+              coalesceData.getNode(i-1,j,k-1)->addNeighborCoalesced();
+          }
+          if (!x_flat || !y_flat) {
+            coalesceData.getNode(i+1,j+1,k)->addNeighborCoalesced();
+            if (i > 0 && j > 0)
+              coalesceData.getNode(i-1,j-1,k)->addNeighborCoalesced();
+          }
+          if (!y_flat || !z_flat) {
+            coalesceData.getNode(i,j+1,k+1)->addNeighborCoalesced();
+            if (j > 0 && k > 0)
+              coalesceData.getNode(i,j-1,k-1)->addNeighborCoalesced();
+          }
+          if (!y_flat || !z_flat) {
+            coalesceData.getNode(i+1,j+1,k+1)->addNeighborCoalesced();
+            if (i > 0 && j > 0 && k > 0)
+              coalesceData.getNode(i-1,j-1,k-1)->addNeighborCoalesced();
+          }
           // if (x_flat || y_flat || z_flat)
             // for (auto n : nodes) n.setCoalesced(true);
           // addTensorToField(output, avg.getPoint(), avg.getTensor());
@@ -453,8 +488,9 @@ CoalesceMeshAlgo::runImpl(FieldHandle& input, FieldHandle& isoValueField, FieldH
 	const std::string rMethod = getOption(Parameters::CoalesceMethod);
 	const double unc_threshold = get(Parameters::IsoValue).toDouble();
 	const int coalesce_count = get(Parameters::CoalesceCount).toInt();
-  printf("isoval %f\n", unc_threshold);
 	const std::string addCon = getOption(Parameters::AddConstraints);
+	const int neighborThres = get(Parameters::NeighborThreshold).toInt();
+  std::cout << "neigh thres: " << neighborThres << "\n";
 
   if (input->vfield()->num_values() == 0)
   {
@@ -613,9 +649,14 @@ CoalesceMeshAlgo::runImpl(FieldHandle& input, FieldHandle& isoValueField, FieldH
   //     }
 
   for (int i = 0; i < coalesce_count; ++i) {
-    furtherCoalesce(coalesceData, unc_threshold);
-    coalesceData.addUncoalesced(output);
-    coalesceData.decrementDims();
+      for (int i = 0; i < 3; ++i)
+        dims[i] = std::max(static_cast<int>(dims[i]-1), 1);
+    CoalesceData newData(dims);
+
+    furtherCoalesce(coalesceData, newData, unc_threshold);
+    coalesceData.addUncoalesced(output, neighborThres);
+    // coalesceData.decrementDims();
+    coalesceData = newData;
   }
 
   // furtherCoalesce(coalesceData, unc_threshold);

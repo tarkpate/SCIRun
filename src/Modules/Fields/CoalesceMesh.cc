@@ -62,6 +62,7 @@ void CoalesceMesh::setStateDefaults()
   setStateStringFromAlgoOption(Parameters::CoalesceMethod);
   setStateDoubleFromAlgo(Parameters::IsoValue);
   setStateIntFromAlgo(Parameters::CoalesceCount);
+  setStateIntFromAlgo(Parameters::NeighborThreshold);
 }
 
 // TODO move to separate algo
@@ -142,6 +143,7 @@ void CoalesceMesh::execute()
     setAlgoOptionFromState(Parameters::CoalesceMethod);
     setAlgoDoubleFromState(Parameters::IsoValue);
     setAlgoIntFromState(Parameters::CoalesceCount);
+    setAlgoIntFromState(Parameters::NeighborThreshold);
 
     std::vector<Mesh::index_type> dims;
     get_dimensions(field, dims);

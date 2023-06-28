@@ -50,6 +50,7 @@ ALGORITHM_PARAMETER_DECL(CoalesceMethod);
 ALGORITHM_PARAMETER_DECL(AddConstraints);
 ALGORITHM_PARAMETER_DECL(IsoValue);
 ALGORITHM_PARAMETER_DECL(CoalesceCount);
+ALGORITHM_PARAMETER_DECL(NeighborThreshold);
 
 class SCISHARE CoalesceMeshAlgo : public AlgorithmBase
 {
