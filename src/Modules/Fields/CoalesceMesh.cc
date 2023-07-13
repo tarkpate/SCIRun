@@ -63,6 +63,8 @@ void CoalesceMesh::setStateDefaults()
   setStateDoubleFromAlgo(Parameters::IsoValue);
   setStateIntFromAlgo(Parameters::CoalesceCount);
   setStateIntFromAlgo(Parameters::NeighborThreshold);
+  setStateIntFromAlgo(Parameters::BlockSize);
+  setStateIntFromAlgo(Parameters::OverlapSize);
 }
 
 // TODO move to separate algo
@@ -144,6 +146,8 @@ void CoalesceMesh::execute()
     setAlgoDoubleFromState(Parameters::IsoValue);
     setAlgoIntFromState(Parameters::CoalesceCount);
     setAlgoIntFromState(Parameters::NeighborThreshold);
+    setAlgoIntFromState(Parameters::BlockSize);
+    setAlgoIntFromState(Parameters::OverlapSize);
 
     std::vector<Mesh::index_type> dims;
     get_dimensions(field, dims);

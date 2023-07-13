@@ -53,6 +53,8 @@ CoalesceMeshDialog::CoalesceMeshDialog(const std::string& name, ModuleStateHandl
   addDoubleSpinBoxManager(isoValueSpinBox_, Parameters::IsoValue);
   addSpinBoxManager(coalesceSpinBox_, Parameters::CoalesceCount);
   addSpinBoxManager(neighborThresholdSpinBox_, Parameters::NeighborThreshold);
+  addSpinBoxManager(blockSizeSpinBox_, Parameters::BlockSize);
+  addSpinBoxManager(overlapSizeSpinBox_, Parameters::OverlapSize);
 
   connect(constraintComboBox_, qOverload<int>(&QComboBox::activated), this, &CoalesceMeshDialog::setIsoValueEnabled);
 }
