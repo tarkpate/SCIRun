@@ -33,6 +33,7 @@
 #include <Core/Datatypes/Legacy/Field/FieldInformation.h>
 #include <Core/Algorithms/Base/AlgorithmPreconditions.h>
 #include <Core/Algorithms/Base/AlgorithmVariableNames.h>
+#include <Core/Algorithms/Math/TensorInterpolation.h>
 
 #include <Core/Datatypes/Dyadic3DTensor.h>
 #include <Core/Utils/TensorUtil.h>
@@ -219,7 +220,7 @@ class CoalesceData {
             // for (int i = 0; i < data.size(); ++i) {
             // auto n = data[i];
             auto n = getNode(i,j,k);
-            if (n->isValid() && n->getNeighborsCoalesced() > neighborThres) {
+            if (n->isValid() && n->getNeighborsCoalesced() < neighborThres) {
               addTensorToField(output, n->getPoint(), n->getTensor());
             }
             continue;
@@ -333,6 +334,10 @@ void addRemaining(CoalesceData& coalesceData, FieldHandle& output) {
       }
 }
 void furtherCoalesce(CoalesceData& coalesceData, CoalesceData& newData, float unc_threshold, int blockSize, int overlapSize, int borderSize) {
+
+  TensorInterpolationAlgo interpAlgo(TensorInterpolationAlgo::Method::LINEAR_INVARIANT,
+                                     TensorInterpolationAlgo::Method::LOG_EUCLIDEAN);
+
   const CoalesceData::data_index_type& dims = coalesceData.getDims();
   const CoalesceData::data_index_type& newDims = newData.getDims();
   bool x_flat = dims[0] <= 1;
@@ -369,17 +374,33 @@ void furtherCoalesce(CoalesceData& coalesceData, CoalesceData& newData, float un
           if (!n->isValid()) valid = false;
         if (!valid) continue;
 
-        CoalesceDataNode avg(*nodes[0]);
-        for (int n = 1; n < nodes.size(); ++n) {
-          if (!nodes[n]->isValid()) continue;
-          avg = avg + *nodes[n];
+        std::vector<Dyadic3DTensor> tensors(nodes.size());
+        Point avgPoint = Point(0, 0, 0);
+        float maxUncVal = 0;
+        for (int n = 0; n < nodes.size(); ++n) {
+          tensors[n] = nodes[n]->getTensor();
+          avgPoint += nodes[n]->getPoint();
+          maxUncVal = std::max(maxUncVal, nodes[n]->getUncertaintyVal());
         }
-        double scale_factor = 2.0;
-        avg = avg / nodes.size() * scale_factor;
-        if (avg.getUncertaintyVal() < unc_threshold) {
-          avg.setValid(true);
-          avg.resetNeighbors();
-          newData.setNode(i,j,k, avg);
+        avgPoint /= nodes.size();
+
+        const static double scale_factor = 2.0;
+        Dyadic3DTensor avgTensor = interpAlgo.interpolate(tensors);
+        avgTensor = avgTensor * scale_factor;
+
+        // CoalesceDataNode avg(*nodes[0]);
+        // for (int n = 1; n < nodes.size(); ++n) {
+          // if (!nodes[n]->isValid()) continue;
+          // avg = avg + *nodes[n];
+        // }
+        CoalesceDataNode avgNode;
+        avgNode.setTensor(avgTensor);
+        avgNode.setUncertaintyVal(maxUncVal);
+        if (avgNode.getUncertaintyVal() < unc_threshold) {
+          avgNode.setValid(true);
+          avgNode.resetNeighbors();
+          avgNode.setPoint(avgPoint);
+          newData.setNode(i,j,k, avgNode);
           coalesceData.getNode(sampleX,sampleY,sampleZ)->setValid(false);
           for (auto n : nodes) n->addNeighborCoalesced();
         }
@@ -412,7 +433,6 @@ CoalesceMeshAlgo::runImpl(FieldHandle& input, FieldHandle& isoValueField, FieldH
 	const int coalesceCount = get(Parameters::CoalesceCount).toInt();
 	const std::string addCon = getOption(Parameters::AddConstraints);
 	const int neighborThres = get(Parameters::NeighborThreshold).toInt();
-  std::cout << "neigh thres: " << neighborThres << "\n";
 
   if (input->vfield()->num_values() == 0)
   {
@@ -483,7 +503,7 @@ CoalesceMeshAlgo::runImpl(FieldHandle& input, FieldHandle& isoValueField, FieldH
   // int z_start = z_flat ? 0 : borderSize;
   CoalesceData::data_index_type newDims;
 
-  for (int i = 0; i < coalesceCount; ++i) {
+  for (int c = 0; c < coalesceCount; ++c) {
     // int x_end = x_flat ? 1 : static_cast<int>(dims[0])-borderSize;
     // int y_end = y_flat ? 1 : static_cast<int>(dims[1])-borderSize;
     // int z_end = z_flat ? 1 : static_cast<int>(dims[2])-borderSize;
@@ -491,7 +511,7 @@ CoalesceMeshAlgo::runImpl(FieldHandle& input, FieldHandle& isoValueField, FieldH
 
     for (int i = 0; i < 3; ++i)
       newDims[i] = std::max(1, static_cast<int>(VMesh::index_type(dims[i] - 2*borderSize) / incSize + 1));
-    std::cout << "new dims: " << newDims[0] << ", " << newDims[1] << ", " << newDims[2] << "\n";
+    // std::cout << "new dims: " << newDims[0] << ", " << newDims[1] << ", " << newDims[2] << "\n";
     CoalesceData newData(newDims);
 
     furtherCoalesce(coalesceData, newData, uncThreshold, blockSize, overlapSize, borderSize);
