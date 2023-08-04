@@ -49,6 +49,7 @@ SET(Algorithms_Math_SRCS
   BooleanCompareAlgo.cc
   ResizeMatrixAlgo.cc
   CreateStandardMatrixAlgo.cc
+  ModelTensorAlgo.cc
 )
 
 SET(Algorithms_Math_HEADERS
@@ -75,6 +76,7 @@ SET(Algorithms_Math_HEADERS
   BooleanCompareAlgo.h
   ResizeMatrixAlgo.h
   CreateStandardMatrixAlgo.h
+  ModelTensorAlgo.h
 )
 
 SCIRUN_ADD_LIBRARY(Algorithms_Math

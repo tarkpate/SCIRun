@@ -26,56 +26,35 @@
 */
 
 
-#include <Core/Algorithms/Base/AlgorithmVariableNames.h>
+#ifndef MODULES_STRING_MODELTENSOR_H
+#define MODULES_STRING_MODELTENSOR_H
 
-using namespace SCIRun::Core::Algorithms;
+#include <Dataflow/Network/Module.h>
+#include <Modules/Math/share.h>
 
-#define PARAMETER(name) const AlgorithmParameterName Variables::name(#name);
-#define INPUT(name) const AlgorithmInputName Variables::name(#name);
-#define OUTPUT(name) const AlgorithmOutputName Variables::name(#name);
+namespace SCIRun {
+namespace Modules {
+namespace Math {
 
-PARAMETER(RowsOrColumns)
-PARAMETER(Operator)
-PARAMETER(ScalarValue)
-PARAMETER(TargetError)
-PARAMETER(MaxIterations)
-PARAMETER(Method)
-PARAMETER(Preconditioner)
-PARAMETER(Filename)
-PARAMETER(BuildConvergence)
-PARAMETER(FileTypeList)
-PARAMETER(FileExtension)
-PARAMETER(FileTypeName)
-PARAMETER(GuiFileTypeName)
-PARAMETER(FormatString)
-PARAMETER(FunctionString)
-PARAMETER(ObjectInfo)
-PARAMETER(ScriptEnvironmentVariable)
-PARAMETER(ProgrammableInputPortEnabled)
+class SCISHARE ModelTensor : public SCIRun::Dataflow::Networks::Module,
+// DWI, b-vecs, b-vals
+public Has3InputPorts<MatrixPortTag, MatrixPortTag, MatrixPortTag>,
+// Tensor Field, Residuals?
+public Has2OutputPorts<FieldPortTag, MatrixPortTag>
+{
+public:
+  ModelTensor();
+  virtual void execute() override;
+  virtual void setStateDefaults() override;
 
-INPUT(InputMatrix)
-INPUT(FirstMatrix)
-INPUT(SecondMatrix)
-INPUT(ThirdMatrix)
-INPUT(LHS)
-INPUT(RHS)
-INPUT(MatrixToWrite)
-INPUT(InputField)
-INPUT(ObjectField)
-INPUT(ListOfInputFields)
-INPUT(InputFields)
-INPUT(Source)
-INPUT(Destination)
-INPUT(InputNrrd)
-INPUT(InputComplexMatrix)
+  INPUT_PORT(0, FirstMatrix, Matrix);
+  INPUT_PORT(1, SecondMatrix, Matrix);
+  INPUT_PORT(2, ThirdMatrix, Matrix);
+  OUTPUT_PORT(0, OutputTensor, Field);
+  OUTPUT_PORT(1, OutputResidual, Matrix);
+  MODULE_TRAITS_AND_INFO(ModuleFlags::ModuleHasUIAndAlgorithm);
+};
+}}}
 
-OUTPUT(MatrixInfo)
-OUTPUT(Result)
-OUTPUT(ResultMatrix)
-OUTPUT(MatrixLoaded)
-OUTPUT(Solution)
-OUTPUT(OutputField)
-OUTPUT(OutputMatrix)
-OUTPUT(OutputComplexMatrix)
-OUTPUT(OutputNrrd)
-OUTPUT(ListOfOutputFields)
+
+#endif

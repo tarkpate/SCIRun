@@ -1,0 +1,18 @@
+{
+  "module": {
+    "name": "ModelTensor",
+    "namespace": "Math",
+    "status": "...",
+    "description": "...",
+    "header": "Modules/Math/ModelTensor.h"
+  },
+  "algorithm": {
+    "name": "ModelTensorAlgo",
+    "namespace": "Math",
+    "header": "Core/Algorithms/Math/ModelTensorAlgo.h"
+  },
+  "UI": {
+    "name": "ModelTensorDialog",
+    "header": "Interface/Modules/Math/ModelTensorDialog.h"
+  }
+}

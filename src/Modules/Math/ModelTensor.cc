@@ -26,56 +26,41 @@
 */
 
 
+#include <Modules/Math/ModelTensor.h>
+#include <Core/Datatypes/Matrix.h>
 #include <Core/Algorithms/Base/AlgorithmVariableNames.h>
+#include <Core/Datatypes/Legacy/Field/Field.h>
 
+using namespace SCIRun;
+using namespace SCIRun::Modules::Math;
+using namespace SCIRun::Core::Datatypes;
+using namespace SCIRun::Dataflow::Networks;
 using namespace SCIRun::Core::Algorithms;
 
-#define PARAMETER(name) const AlgorithmParameterName Variables::name(#name);
-#define INPUT(name) const AlgorithmInputName Variables::name(#name);
-#define OUTPUT(name) const AlgorithmOutputName Variables::name(#name);
+const ModuleLookupInfo ModelTensor::staticInfo_("ModelTensor","Math","SCIRun");
 
-PARAMETER(RowsOrColumns)
-PARAMETER(Operator)
-PARAMETER(ScalarValue)
-PARAMETER(TargetError)
-PARAMETER(MaxIterations)
-PARAMETER(Method)
-PARAMETER(Preconditioner)
-PARAMETER(Filename)
-PARAMETER(BuildConvergence)
-PARAMETER(FileTypeList)
-PARAMETER(FileExtension)
-PARAMETER(FileTypeName)
-PARAMETER(GuiFileTypeName)
-PARAMETER(FormatString)
-PARAMETER(FunctionString)
-PARAMETER(ObjectInfo)
-PARAMETER(ScriptEnvironmentVariable)
-PARAMETER(ProgrammableInputPortEnabled)
+ModelTensor::ModelTensor () : Module(staticInfo_)
+{
+    INITIALIZE_PORT(FirstMatrix);
+    INITIALIZE_PORT(SecondMatrix);
+    INITIALIZE_PORT(ThirdMatrix);
+    INITIALIZE_PORT(OutputTensor);
+    INITIALIZE_PORT(OutputResidual);
+}
 
-INPUT(InputMatrix)
-INPUT(FirstMatrix)
-INPUT(SecondMatrix)
-INPUT(ThirdMatrix)
-INPUT(LHS)
-INPUT(RHS)
-INPUT(MatrixToWrite)
-INPUT(InputField)
-INPUT(ObjectField)
-INPUT(ListOfInputFields)
-INPUT(InputFields)
-INPUT(Source)
-INPUT(Destination)
-INPUT(InputNrrd)
-INPUT(InputComplexMatrix)
+void ModelTensor::setStateDefaults()
+{
+  auto state = get_state();
+}
 
-OUTPUT(MatrixInfo)
-OUTPUT(Result)
-OUTPUT(ResultMatrix)
-OUTPUT(MatrixLoaded)
-OUTPUT(Solution)
-OUTPUT(OutputField)
-OUTPUT(OutputMatrix)
-OUTPUT(OutputComplexMatrix)
-OUTPUT(OutputNrrd)
-OUTPUT(ListOfOutputFields)
+void ModelTensor::execute()
+{
+  auto dwi = getRequiredInput(FirstMatrix);
+  auto bvec = getRequiredInput(SecondMatrix);
+  auto bval = getRequiredInput(ThirdMatrix);
+
+  if (needToExecute())
+  {
+    // auto output = algo().run(withInputData((FirstMatrix, dwi)));
+  }
+}

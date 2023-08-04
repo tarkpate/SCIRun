@@ -61,6 +61,7 @@ public:
   static const AlgorithmInputName InputMatrix;
   static const AlgorithmInputName FirstMatrix;
   static const AlgorithmInputName SecondMatrix;
+  static const AlgorithmInputName ThirdMatrix;
   static const AlgorithmInputName LHS;
   static const AlgorithmInputName RHS;
   static const AlgorithmInputName MatrixToWrite;
