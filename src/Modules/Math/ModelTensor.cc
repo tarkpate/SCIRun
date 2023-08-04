@@ -61,6 +61,6 @@ void ModelTensor::execute()
 
   if (needToExecute())
   {
-    // auto output = algo().run(withInputData((FirstMatrix, dwi)));
+    auto output = algo().run(withInputData((FirstMatrix, dwi)(SecondMatrix, bvec)(ThirdMatrix, bval)));
   }
 }
