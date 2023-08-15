@@ -58,8 +58,8 @@ class SCISHARE CoalesceMeshAlgo : public AlgorithmBase
 {
   public:
     CoalesceMeshAlgo();
-		bool runImpl(FieldHandle input, Datatypes::Double isovalue, FieldHandle& output, Datatypes::MatrixHandle& mapping) const;
-		bool runImpl(FieldHandle& inputField, FieldHandle& isoValueField, FieldHandle& output) const;
+		bool runImpl(const FieldHandle input, const Datatypes::Double isovalue, FieldHandle& output, Datatypes::MatrixHandle& mapping) const;
+		bool runImpl(const FieldHandle& inputField, const FieldHandle& isoValueField, FieldHandle& output) const;
 
 		AlgorithmOutput run(const AlgorithmInput& input) const override;
   private:
