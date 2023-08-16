@@ -97,7 +97,7 @@ class CoalesceDataNode {
     int getNeighborsCoalesced() const { return neighbors_coalesced; }
     size_t getNumSamples() const { return t_samples.size(); }
     const Dyadic3DTensor& getTensor() const { return t; }
-    const std::vector<Dyadic3DTensor>& getTensors() const { return t_samples; }
+    Dyadic3DTensor getTensorSample(int i) const { return t_samples[i]; }
     const Point& getPoint() const { return p; }
 
     CoalesceDataNode& operator+(const CoalesceDataNode& other) {
@@ -162,17 +162,7 @@ class CoalesceData {
         data[i].setValid(false);
     }
 
-    // CoalesceDataNode* getNode(data_index_type idx) { return &data[getArrayIndex(idx)]; }
     CoalesceDataNode* getNode(int x, int y, int z) { return &data[getArrayIndex(x, y, z)]; }
-    // const CoalesceDataNode* getNodeConst(int x, int y, int z) const { return &data[getArrayIndex(x, y, z)]; }
-    // void setNode(data_index_type idx, const CoalesceDataNode& node) { data[getArrayIndex(idx)] = CoalesceDataNode(node); }
-    // void setNode(int x, int y, int z, const CoalesceDataNode& node) { data[getArrayIndex(x, y, z)] = CoalesceDataNode(node); }
-
-    // void addNodeIfValid(std::vector<CoalesceDataNode*>& vec, int i, int j, int k) {
-      // auto n = getNode(i,j,k);
-      // if (n->isValid()) vec.push_back(n);
-    // }
-
 
     void addUncoalesced(FieldHandle& output, int neighborThres) {
       for (int k = 0; k < dims[2]; k++)
@@ -184,11 +174,6 @@ class CoalesceData {
             }
           }
     }
-
-    // void decrementDims() {
-    //   for (int i = 0; i < 3; ++i)
-    //     dims[i] = std::max(static_cast<int>(dims[i]-1), 1);
-    // }
 
     void makeNode(index_type idx, const Point& p, const Dyadic3DTensor& t, bool valid) {
       CoalesceDataNode& n = data[idx];
@@ -259,29 +244,24 @@ void addRemaining(CoalesceData* coalesceData, FieldHandle& output) {
 
 void furtherCoalesce(CoalesceData* coalesceData, CoalesceData* newData, float unc_threshold, int blockSize, int overlapSize, int borderSize, int coalesceCount) {
 
+
   TensorInterpolationAlgo interpAlgo(TensorInterpolationAlgo::Method::LINEAR_INVARIANT,
                                      TensorInterpolationAlgo::Method::LOG_EUCLIDEAN);
 
   const CoalesceData::data_index_type& dims = coalesceData->getDims();
   const CoalesceData::data_index_type& newDims = newData->getDims();
-  /* std::cout << "1\n"; */
+
   bool x_flat = dims[0] <= 1;
   bool y_flat = dims[1] <= 1;
   bool z_flat = dims[2] <= 1;
   int incSize = blockSize - overlapSize;
-  for (int k = 0; k < newDims[2]; k++) // TODO change increment
+
+  for (int k = 0; k < newDims[2]; k++)
     for (int j = 0; j < newDims[1]; j++)
       for (int i = 0; i < newDims[0]; i++) {
-        /* std::cout << "2\n"; */
-        // if (newData->getNode(i,j,k)->isValid())
-          // std::cout << "hows constr?!?\n", exit(1);
-        // if (i == 1 && j == 53 && k == 0)
-          // std::cout << "i,j,k: " << i << ", " << j << ", " << k << "\n";
-
         int sampleX = x_flat ? 0 : i*incSize + borderSize;
         int sampleY = y_flat ? 0 : j*incSize + borderSize;
         int sampleZ = z_flat ? 0 : k*incSize + borderSize;
-        // std::cout << "sample i,j,k: " << sampleX << ", " << sampleY << ", " << sampleZ << "\n";
 
         bool valid = true;
         std::vector<CoalesceDataNode*> nodes;
@@ -294,52 +274,29 @@ void furtherCoalesce(CoalesceData* coalesceData, CoalesceData* newData, float un
           }
 
         if (valid) {
-        /* std::cout << "3\n"; */
         int numSamples = nodes[0]->getNumSamples();
         std::vector<Dyadic3DTensor> tensors(nodes.size()*numSamples);
         std::vector<Dyadic3DTensor::VectorType> eigvecs(nodes.size()*numSamples);
         Point avgPoint = Point(0, 0, 0);
-        // std::cout << "4\n";
         for (int n = 0; n < nodes.size(); ++n) {
+          auto node = nodes[n];
           for (int s = 0; s < numSamples; ++s) {
-            if (nodes[n]->isValid()){// && nodes[n]->getNumSamples() != std::pow(9,coalesceCount)) {
-              std::cout << "num samp " << nodes[n]->getNumSamples() << "\n";
-              std::cout << "is valid " << nodes[n]->isValid() << "\n";
-              std::cout << "passthrough\n";//, exit(1);
-            }
-            /* std::cout << "n, s: " << n << ", " << s << "\n"; */
-            /* std::cout << "tensors size: " << nodes[n]->getTensors().size() << "\n"; */
-            /* std::cout << "valid: " << nodes[n]->isValid() << "\n"; */
-            tensors[n*numSamples+s] = nodes[n]->getTensors()[s];
-            /* std::cout << "4.1\n"; */
+            tensors[n*numSamples+s] = node->getTensorSample(s);
             eigvecs[n*numSamples+s] = tensors[n*numSamples+s].getEigenvector(0);
           }
-          avgPoint += nodes[n]->getPoint();
+          avgPoint += node->getPoint();
         }
-        // std::cout << "5\n";
-        if (tensors.size() <=1) std::cout << "ten too small!\n", exit(1);
         avgPoint /= nodes.size();
 
         Dyadic3DTensor::VectorType avgVec(0);
-        for (int c = 0; c < eigvecs.size(); ++c) {
-          avgVec += eigvecs[c].normalized();
-        }
+        for (auto e : eigvecs)
+          avgVec += e.normalized();
         avgVec.normalize();
 
-        // std::cout << "6\n";
-        std::vector<float> angleDiff(tensors.size());
-        for (int c = 0; c < tensors.size(); ++c) {
+        std::vector<float> angleDiff(eigvecs.size());
+        for (int c = 0; c < eigvecs.size(); ++c)
           angleDiff[c] = 1.0-abs(avgVec.dot(eigvecs[c]));
-        }
-        /* std::cout << "7\n"; */
-        // dot 1 is aligned
-        // dot 0 is ortho
-        // fa 1 is linear
-        // fa 0 is spherical
-        // d1f1 linear, aligned - can coalesce
-        // d0f1 linear, unaligned - cannot coalesce
-        // d1f0 spherical, aligned - can coalesce
-        // d0f0 spherical, unaligned - can coalesce
+
         std::vector<float> uncVals(tensors.size());
         float avgUncVal = 0;
         for (int c = 0; c < tensors.size(); ++c) {
@@ -349,39 +306,24 @@ void furtherCoalesce(CoalesceData* coalesceData, CoalesceData* newData, float un
             uncVals[c] = fa;
           else
             uncVals[c] = angle;
-          /* else // otherwise ignore */
-            /* uncVals[c] = 1; */
           avgUncVal += uncVals[c];
         }
         avgUncVal /= tensors.size();
-        /* std::cout << "unc val: " << avgUncVal <<  "\n"; */
-        // std::cout << "7\n";
         Dyadic3DTensor avgTensor = interpAlgo.interpolate(tensors);
         avgTensor = avgTensor * std::pow(2, coalesceCount+1);
 
-        // std::cout << "8\n";
-        /* avgNode.setUncertaintyVal(avgUncVal); */
-        // std::cout << "9\n";
-        /* std::cout << "unc val: " << avgUncVal <<  "\n"; */
         CoalesceDataNode* avgNode = newData->getNode(i,j,k);
         if (avgUncVal < unc_threshold) {
-          /* std::cout << "hooks!\n"; */
           avgNode->setValid(true);
-          // avgNode->setTensor(avgTensor);
-          // avgNode->setPoint(avgPoint);
-          // avgNode->setTensors(tensors);
+          avgNode->setTensor(avgTensor);
+          avgNode->setPoint(avgPoint);
+          avgNode->setTensors(tensors);
           coalesceData->getNode(sampleX,sampleY,sampleZ)->setValid(false);
-          // for (auto n : nodes) n->addNeighborCoalesced();
-          // std::cout << "num samp " << avgNode->getNumSamples() << "\n";
-          // std::cout << "coal " << std::pow(9,coalesceCount+1) << "\n";
-          // if (avgNode->isValid() && avgNode->getNumSamples() != std::pow(9,coalesceCount+1)) std::cout << "yooooo\n", exit(1);
+          for (auto n : nodes) n->addNeighborCoalesced();
         }
         else{
           avgNode->setValid(false);
         }
-        // if (newData.getNode(i,j,k)->isValid() && newData.getNode(i,j,k)->getNumSamples() <= 1)
-        //   std::cout << "hows?!?\n", exit(1);
-        // }
         }
     }
 }
@@ -468,32 +410,25 @@ CoalesceMeshAlgo::runImpl(const FieldHandle& input, const FieldHandle& isoValueF
   VMesh::index_type borderSize = blockSize / 2; // Remainder ignored
   CoalesceData::data_index_type newDims;
 
-    std::cout << "dims " << dims[0] << ", " << dims[1] << ", " << dims[2] << "\n";
-  // CoalesceData* currData = &coalesceData;
   CoalesceData* newData;
   for (int c = 0; c < coalesceCount; ++c) {
-    std::cout << "c count: " << c << "\n";
     int incSize = blockSize - overlapSize;
 
     for (int i = 0; i < 3; ++i)
-      newDims[i] = std::max(1, static_cast<int>(VMesh::index_type(dims[i] - 2*borderSize) / incSize + 1));
-    std::cout << "new dims " << newDims[0] << ", " << newDims[1] << ", " << newDims[2] << "\n";
+      newDims[i] = std::max(1, static_cast<int>((dims[i]-borderSize)/incSize));
     newData = new CoalesceData(newDims);
 
-    std::cout << "calling further coalesce...\n";
     furtherCoalesce(currData, newData, uncThreshold, blockSize, overlapSize, borderSize, c);
-    std::cout << "calling add uncoalesced...\n";
-    // currData->addUncoalesced(output, neighborThres);
-    // delete currData;
+    currData->addUncoalesced(output, neighborThres);
+
     currData = newData;
     for (int i = 0; i < 3; ++i)
       dims[i] = newDims[i];
+
   }
 
-  std::cout << "calling add remaining...\n";
   addRemaining(currData, output);
   delete currData;
-  std::cout << "deleted\n";
 
   return true;
 }
