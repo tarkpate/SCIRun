@@ -54,22 +54,24 @@ class TensorModeler {
       Eigen::VectorXd s0(numVoxels_);
       int num = 0;
       for (int i = 0; i < numGradients_; ++i)
-        if (bvals_->get(i,0) == 0) {
+        if (bvals_->get(0,i) == 0) {
           num++;
           for (int j = 0; j < numVoxels_; ++j)
-            s0(j) += dwi_->get(i,j);
+            s0(j) += dwi_->get(j,i);
         }
       return s0/num; // Returns average
     }
 
     Eigen::MatrixXd computeLnSignal() {
       Eigen::VectorXd s0 = computeLnSignal0();
+      // TODO make ln0 only one row
       Eigen::MatrixXd y(numGradients_, numVoxels_);
+      std::cout << "y shape(row,col): " << y.rows() << ", " << y.cols() << "\n";
 
       for (int i = 0; i < numGradients_; ++i) {
-        if (bvals_->get(i,0) != 0) {
+        if (bvals_->get(0,i) != 0) {
           for (int j = 0; j < numVoxels_; ++j) {
-            y(i,j) = std::log(dwi_->get(i,j));
+            y(i,j) = std::log(dwi_->get(j,i));
           }
         }
       }
@@ -77,17 +79,17 @@ class TensorModeler {
     }
 
     Eigen::MatrixXd computeDesignMatrix() {
-      Eigen::MatrixXd design(7,numGradients_);
+      Eigen::MatrixXd design(numGradients_,7);
       for (int i = 0; i < numGradients_; ++i) {
-        auto bval = bvals_->get(i,0);
-        auto bvec = Eigen::Vector3d(bvecs_->get(i,0), bvecs_->get(i,1), bvecs_->get(i,2));
-        design(0, i) = -bval*bvec[0]*bvec[0];
-        design(1, i) = -bval*bvec[1]*bvec[1];
-        design(2, i) = -bval*bvec[2]*bvec[2];
-        design(3, i) = -2*bval*bvec[0]*bvec[1];
-        design(4, i) = -2*bval*bvec[1]*bvec[2];
-        design(5, i) = -2*bval*bvec[0]*bvec[2];
-        design(6, i) = -1;
+        auto bval = bvals_->get(0,i);
+        auto bvec = Eigen::Vector3d(bvecs_->get(0,i), bvecs_->get(1,i), bvecs_->get(2,i));
+        design(i, 0) = -bval*bvec[0]*bvec[0];
+        design(i, 1) = -bval*bvec[1]*bvec[1];
+        design(i, 2) = -bval*bvec[2]*bvec[2];
+        design(i, 3) = -2*bval*bvec[0]*bvec[1];
+        design(i, 4) = -2*bval*bvec[0]*bvec[2];
+        design(i, 5) = -2*bval*bvec[1]*bvec[2];
+        design(i, 6) = -bval;
       }
       return design;
     }
@@ -96,17 +98,14 @@ class TensorModeler {
       auto x = computeDesignMatrix();
       auto y = computeLnSignal();
       Eigen::MatrixXd ols = (x.transpose()*x).inverse() * x.transpose() * y;
-      std::cout << "ols dim: " << ols.cols() << ", "<<ols.rows()<<"\n";
     }
 
   public:
     TensorModeler(MatrixHandle dwi, MatrixHandle bvecs, MatrixHandle bvals, FitMethod fit) : dwi_(dwi), bvecs_(bvecs), bvals_(bvals), fit_(fit), numGradients_(dwi->ncols()), numVoxels_(dwi->nrows()) {
-      computeDesignMatrix();
+      // computeDesignMatrix();
     }
 
     FieldHandle getTensors() {
-      std::cout << "numVoxels: " << numVoxels_ << "\n";
-      std::cout << "numGradients: " << numGradients_ << "\n";
       // computeLnSignal();
       computeOLS();
       return nullptr;
@@ -124,7 +123,6 @@ AlgorithmOutput ModelTensorAlgo::run(const AlgorithmInput& input) const
   const auto dwi = input.get<Matrix>(Variables::FirstMatrix);
   const auto bvecs = input.get<Matrix>(Variables::SecondMatrix);
   const auto bvals = input.get<Matrix>(Variables::ThirdMatrix);
-  std::cout << "in algo run\n";
   TensorModeler modeler(dwi, bvecs, bvals, TensorModeler::FitMethod::WLS);
   auto tensors = modeler.getTensors();
   auto residuals = modeler.getResiduals();
