@@ -57,23 +57,30 @@ class TensorModeler {
         if (bvals_->get(0,i) == 0) {
           num++;
           for (int j = 0; j < numVoxels_; ++j)
-            s0(j) += dwi_->get(j,i);
+            s0(j) += std::log(dwi_->get(j,i));
         }
       return s0/num; // Returns average
     }
 
     Eigen::MatrixXd computeLnSignal() {
-      Eigen::VectorXd s0 = computeLnSignal0();
+      // Eigen::VectorXd s0 = computeLnSignal0();
+
+      // compute number of non-zero gradients
+      // int num = 0;
+      // for (int i = 0; i < numGradients_; ++i)
+        // if (bvals_->get(0,i) != 0) num++;
+
       // TODO make ln0 only one row
+      // Eigen::MatrixXd y(num+1, numVoxels_);
       Eigen::MatrixXd y(numGradients_, numVoxels_);
       std::cout << "y shape(row,col): " << y.rows() << ", " << y.cols() << "\n";
 
       for (int i = 0; i < numGradients_; ++i) {
-        if (bvals_->get(0,i) != 0) {
+        // if (bvals_->get(0,i) != 0) {
           for (int j = 0; j < numVoxels_; ++j) {
-            y(i,j) = std::log(dwi_->get(j,i));
+            y(i,j) = std::log(dwi_->get(i,j));
           }
-        }
+        // }
       }
       return y;
     }
@@ -102,6 +109,8 @@ class TensorModeler {
 
   public:
     TensorModeler(MatrixHandle dwi, MatrixHandle bvecs, MatrixHandle bvals, FitMethod fit) : dwi_(dwi), bvecs_(bvecs), bvals_(bvals), fit_(fit), numGradients_(dwi->ncols()), numVoxels_(dwi->nrows()) {
+      std::cout << " num gradients: " << numGradients_ << "\n";
+      std::cout << " num voxels: " << numVoxels_ << "\n";
       // computeDesignMatrix();
     }
 
