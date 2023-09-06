@@ -50,7 +50,7 @@ public:
   INPUT_PORT(0, FirstMatrix, Matrix);
   INPUT_PORT(1, SecondMatrix, Matrix);
   INPUT_PORT(2, ThirdMatrix, Matrix);
-  OUTPUT_PORT(0, OutputTensor, Field);
+  OUTPUT_PORT(0, OutputField, Field);
   OUTPUT_PORT(1, OutputResidual, Matrix);
   MODULE_TRAITS_AND_INFO(ModuleFlags::ModuleHasUIAndAlgorithm);
 };

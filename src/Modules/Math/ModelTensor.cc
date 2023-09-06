@@ -44,7 +44,7 @@ ModelTensor::ModelTensor () : Module(staticInfo_)
     INITIALIZE_PORT(FirstMatrix);
     INITIALIZE_PORT(SecondMatrix);
     INITIALIZE_PORT(ThirdMatrix);
-    INITIALIZE_PORT(OutputTensor);
+    INITIALIZE_PORT(OutputField);
     INITIALIZE_PORT(OutputResidual);
 }
 
@@ -62,5 +62,6 @@ void ModelTensor::execute()
   if (needToExecute())
   {
     auto output = algo().run(withInputData((FirstMatrix, dwi)(SecondMatrix, bvec)(ThirdMatrix, bval)));
+    sendOutputFromAlgorithm(OutputField, output);
   }
 }
