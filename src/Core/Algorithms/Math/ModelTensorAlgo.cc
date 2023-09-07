@@ -40,6 +40,7 @@
 #include <Core/Datatypes/Legacy/Field/VField.h>
 #include <math.h>
 #include <unsupported/Eigen/MatrixFunctions>
+#include "Eigen/src/Core/Matrix.h"
 
 using namespace SCIRun;
 using namespace Core;
@@ -86,9 +87,22 @@ class TensorModeler {
     }
 
     Eigen::MatrixXd computeOLS() {
-      auto x = computeDesignMatrix();
-      auto y = computeLnSignal();
-      return x.completeOrthogonalDecomposition().pseudoInverse() * y;
+      auto design = computeDesignMatrix();
+      auto lnSig = computeLnSignal();
+      auto inv = design.completeOrthogonalDecomposition().pseudoInverse();
+      return (design.transpose()*design).completeOrthogonalDecomposition().pseudoInverse() *design.transpose()* lnSig;
+    }
+
+    Eigen::MatrixXd computeWLS() {
+      auto design = computeDesignMatrix();
+      auto lnSig = computeLnSignal();
+      Eigen::MatrixXd ols = computeOLS();
+
+      Eigen::MatrixXd fittedLog = design * ols;
+      Eigen::MatrixXd fittedLogExp = fittedLog.array().exp().matrix();
+
+      auto weights = (fittedLogExp*fittedLogExp.transpose()).diagonal().asDiagonal();
+      return (design.transpose()*design).completeOrthogonalDecomposition().pseudoInverse() *design.transpose()*weights* lnSig;
     }
 
   public:
@@ -97,7 +111,7 @@ class TensorModeler {
 
     FieldHandle getTensors() {
       FieldInformation fi("LatVolMesh", "linear", "tensor");
-      Eigen::MatrixXd ols = computeOLS();
+      Eigen::MatrixXd fit = computeWLS();
       // TODO move to user input
       std::vector<int> shape = {81, 106, 76};
 
@@ -109,10 +123,10 @@ class TensorModeler {
       for (int k = 0; k < shape[2]; ++k)
         for (int j = 0; j < shape[1]; ++j)
           for (int i = 0; i < shape[0]; ++i) {
-            auto ols_index = i*shape[1]*shape[2] + j*shape[2] + k;
+            auto fit_index = i*shape[1]*shape[2] + j*shape[2] + k;
             auto out_index = k*shape[1]*shape[0] + j*shape[0] + i;
-            Tensor t(ols(0,ols_index), ols(3,ols_index), ols(4,ols_index),
-                     ols(1,ols_index), ols(5,ols_index), ols(2,ols_index));
+            Tensor t(fit(0,fit_index), fit(3,fit_index), fit(4,fit_index),
+                     fit(1,fit_index), fit(5,fit_index), fit(2,fit_index));
             output->vfield()->set_value(t, out_index);
       }
 
